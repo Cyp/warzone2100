@@ -328,6 +328,31 @@ BOOL screen_GetBackDrop(void)
 void screen_Upload(const char *newBackDropBmp)
 {
 	static bool processed = false;
+	static float startOffsets[4], targetOffsets[4];
+	static int64_t offsetTimes[4], targetOffsetTimes[4];
+	static bool first = true;
+	float offsets[4];
+	unsigned i;
+
+	// Update background offsets.
+	int64_t currTime = SDL_GetTicks();
+	for (i = 0; i != 4; ++i)
+	{
+		if (first || currTime > targetOffsetTimes[i] + 1000)
+		{
+			targetOffsets[i] = rand()%16;
+			targetOffsetTimes[i] = currTime - rand()%(8192 + rand()%1024);
+		}
+		while (currTime > targetOffsetTimes[i])
+		{
+			startOffsets[i] = targetOffsets[i];
+			offsetTimes[i] = targetOffsetTimes[i];
+			targetOffsets[i] = rand()%16;
+			targetOffsetTimes[i] = offsetTimes[i] + 8192 + rand()%1024;
+		}
+		offsets[i] = startOffsets[i] + (targetOffsets[i] - startOffsets[i]) * .5 * (1 - cos(M_PI * (currTime - offsetTimes[i]) / (targetOffsetTimes[i] - offsetTimes[i])));
+	}
+	first = false;
 
 	if(newBackDropBmp != NULL)
 	{
@@ -363,13 +388,13 @@ void screen_Upload(const char *newBackDropBmp)
 	glColor3f(1, 1, 1);
 
 	glBegin(GL_TRIANGLE_STRIP);
-		glTexCoord2f(0, 0);
+		glTexCoord2f(offsets[0], offsets[1]);
 		glVertex2f(0, 0);
-		glTexCoord2f(255, 0);
+		glTexCoord2f(255 - offsets[2], offsets[1]);
 		glVertex2f(screenWidth, 0);
-		glTexCoord2f(0, 255);
+		glTexCoord2f(offsets[0], 255 - offsets[3]);
 		glVertex2f(0, screenHeight);
-		glTexCoord2f(255, 255);
+		glTexCoord2f(255 - offsets[2], 255 - offsets[3]);
 		glVertex2f(screenWidth, screenHeight);
 	glEnd();
 }
