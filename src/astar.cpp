@@ -507,6 +507,198 @@ SDWORD fpathAStarRoute(MOVE_CONTROL *psMove, PATHJOB *psJob)
 	return retval;
 }
 
+class VectorMap
+{
+public:
+	struct Point
+	{
+		Point() {}
+		Point(int32_t x_, int32_t &y_) : x(x_), y(y_) {}
+		bool operator <(Point const &b) const { if (x != b.x) return x < b.x; return y < b.y; }
+
+		int32_t x, y;
+	};
+	struct Edge
+	{
+		Edge() {}
+		Edge(Point const &p1_, Point const &p2_) : p1(p1_), p2(p2_) {}
+
+		Point p1, p2;
+	};
+	struct Triangle
+	{
+		unsigned p[3];    // The triangle's points.
+		unsigned t[3];    // Neighbouring triangles.
+		bool     f[3];    // True iff edge is fixed in place.
+	};
+
+	void addLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2);
+	void triangulate();  // Call after adding all lines.
+
+	static const unsigned pointAtInfinity = ~0;
+
+	std::vector<Point> points;
+	std::vector<Edge> edges;
+	std::vector<Triangle> triangles;
+};
+
+void VectorMap::addLine(int32_t x1, int32_t y1, int32_t x2, int32_t y2)
+{
+	Edge edge(Point(x1, y1), Point(x2, y2));
+	points.push_back(edge.p1);
+	points.push_back(edge.p2);
+	edges.push_back(edge);
+}
+
+void VectorMap::triangulate()
+{
+	// Sort points and remove duplicates.
+	std::sort(points.begin(), points.end());
+	points.erase(std::unique(points.begin(), points.end()), points.end());
+
+	ASSERT_OR_RETURN(, points.size() > 2, "Trying to triangulate nothing...");
+
+	// Seed triangulation with 2 points and 2 triangles.
+	unsigned pointsUsed = 2;
+	triangles.resize(2);
+	triangles[0].p[0] = pointAtInfinity;
+	triangles[0].p[1] = 0;
+	triangles[0].p[2] = 1;
+	triangles[1].p[0] = pointAtInfinity;
+	triangles[1].p[1] = 1;
+	triangles[1].p[2] = 0;
+	for (int e = 0; e < 3; ++e)
+	{
+		triangles[0].t[e] = 1;
+		triangles[0].f[e] = false;
+		triangles[1].t[e] = 0;
+		triangles[1].f[e] = false;
+	}
+
+	while (pointsUsed < points.size())
+	{
+		
+	}
+}
+
+static FILE *dump = NULL;
+static void startLines()
+{
+	dump = fopen("mapDump.svg", "wb");
+	fprintf(dump, "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><svg xmlns:svg=\"http://www.w3.org/2000/svg\" xmlns=\"http://www.w3.org/2000/svg\" version=\"1.1\" width=\"%d\" height=\"%d\" id=\"svg2\"><defs id=\"defs4\" /><g id=\"layer1\">", mapWidth*5, mapHeight*5);
+}
+
+static void finishLines()
+{
+	fprintf(dump, "</g></svg>");
+	fclose(dump);
+	dump = NULL;
+}
+
+static void addLine(int x1, int y1, int x2, int y2)
+{
+	fprintf(dump, "<path d=\"M %d,%d %d,%d\" id=\"\" style=\"fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1\" />", x1*5, y1*5, x2*5, y2*5);
+}
+static void addSquare(int x, int y)
+{
+	fprintf(dump, "<rect x=\"%d\" y=\"%d\" width=\"%d\" height=\"%d\" id=\"\" style=\"fill:#ff0000;fill-opacity:0.07860263;fill-rule:evenodd;stroke:none\" />", x*5, y*5, 5, 5);
+}
+
+static inline bool incrementOrFlush(bool condition, uint16_t &variable, uint16_t &ret)
+{
+	if (condition)
+	{
+		ret = 0;
+		++variable;
+	}
+	else
+	{
+		ret = variable;
+		variable = 0;
+	}
+	return ret > 0;
+}
+
+static void fpathVectoriseMap(PathBlockingType type)
+{
+	startLines();
+
+	uint8_t  scan[mapWidth + 1];
+	uint16_t lines[mapWidth + 2][4];  // 0 = | (left), 1 = | (right), 2 = \, 3 = /
+
+	// Clear data.
+	std::fill(scan, scan + ARRAY_SIZE(scan), 0x3F);
+	memset(lines, 0x00, sizeof(lines));
+
+	// Scan map.
+	for (int y = 0; y < mapHeight + 1; ++y)
+	{
+		// Bits 76543210 in state correspond to blocking map tiles, with (x, y) at the top-right of tile 8:
+		// 012
+		// 345
+		// 678
+		unsigned state = 0x1FF;
+		uint16_t lineUp = 0;
+		uint16_t lineDown = 0;
+		uint16_t linesX2 = 0;
+		for (int x = 0; x < mapWidth + 1; ++x)
+		{
+			bool blocking = x == mapWidth || y == mapHeight || fpathBaseBlockingTile(x, y, type.propulsion, type.owner, type.moveType);
+			state = (state>>1 & 0xDB) | scan[x] | blocking<<8;
+if (fpathBaseBlockingTile(x, y, type.propulsion, type.owner, type.moveType)) addSquare(x, y);
+			scan[x] = state>>3;
+			unsigned walls = 0;
+			if ((state & 1<<4) == 0)  // Don't draw lines on blocking tiles, only around them.
+			{
+				// The string is a 256 entry lookup table, not random line noise. Your internet connection is still working.
+				walls = "\000\000AA@@\001A\004\004  D\004 `@@AA\000\000\001A\004D` \004\004 `H\bPP\b\b\020P\fLM\rL\f\rM\b\b\020IH\b\020ILLM\rL\f\rM@@\001A\000\000\001AD\004``DD\005\005\000@A\001@\000A\001DD``D\004EE\b\b\020P\bH\020P\fLMML\f\rMH\bPI\b\b\020IL\fM\r\f\f\rM\002\002\003\003B\002\003CP\020\a\aP\020\aG\002B\003CB\002\003CPFGGP\006GG` KK  KK\016NOO\016\016OO``KK  KKNNOO\016\016OOBBCCB\002CCPPGG\020P\aGB\002CC\002\002\003C\020\006\a\aP\006\aG` K\vJ\n\vK\016N\017ON\016\017O  KKJ\n\vKNN\017O\016\016\017O"[state ^ ((state>>8) * 0x110)];  // Xor bit 8 into bit 4, clearing bit 8, then use the lookup table.
+			}
+			// Meaning of bits in walls variable:
+			//
+			//  *0000*
+			//  24  53
+			//  2 45 3
+			//  2 54 3
+			//  25  43
+			//  *1111*  <- (x, y) points to bottom right star. (x - 1, y - 1) points to top left star.
+			//
+			// Pattern is: if bit is set, add 1 to the length of the wall we will need to draw. Otherwise, draw the wall, if there is one to draw.
+if (y == 2)
+printf("State (%3d,%3d) = 0x%03X, walls = 0x%02X\n", x, y, state, walls);
+			uint16_t length;
+
+			lines[x][3] = lines[x + 1][3];  // Diagonal, / direction.
+			if (incrementOrFlush(walls & 1<<0, lineUp, length))
+			{
+				addLine(x - 1 - length, y - 1, x - 1, y - 1);
+			}
+			if (incrementOrFlush(walls & 1<<1, lineDown, length))
+			{
+				addLine(x - 1 - length, y, x - 1, y);
+			}
+			if (incrementOrFlush(walls & 1<<2, lines[x][0], length))
+			{
+				addLine(x - 1, y - 1 - length, x - 1, y - 1);
+			}
+			if (incrementOrFlush(walls & 1<<3, lines[x][1], length))
+			{
+				addLine(x, y - 1 - length, x, y - 1);
+			}
+			if (incrementOrFlush(walls & 1<<4, linesX2, length))
+			{
+				addLine(x - 1 - length, y - 1 - length, x - 1, y - 1);
+			}
+			if (incrementOrFlush(walls & 1<<5, lines[x][3], length))
+			{
+				addLine(x + length, y - 1 - length, x, y - 1);
+			}
+			std::swap(lines[x][2], linesX2);  // Diagonal, \ direction.
+		}
+	}
+
+	finishLines();
+}
+
 void fpathSetBlockingMap(PATHJOB *psJob)
 {
 	if (fpathCurrentGameTime != gameTime)
@@ -541,6 +733,8 @@ void fpathSetBlockingMap(PATHJOB *psJob)
 		{
 			map[x + y*mapWidth] = fpathBaseBlockingTile(x, y, type.propulsion, type.owner, type.moveType);
 		}
+
+		fpathVectoriseMap(type);
 	}
 
 	// i now points to the correct map. Make psJob->blockingMap point to it.
