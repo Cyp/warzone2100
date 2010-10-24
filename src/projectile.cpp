@@ -392,6 +392,8 @@ bool proj_SendProjectileAngled(WEAPON *psWeap, SIMPLE_OBJECT *psAttacker, int pl
 	ASSERT_OR_RETURN( false, psTarget == NULL || !psTarget->died, "Aiming at dead target!" );
 
 	PROJECTILE *psProj = new PROJECTILE(ProjectileTrackerID | (realTime >> 4), player);
+	syncDebug("player%d,target{%d,%d,%d}%d,ws%d", player, target.x, target.y, target.z, psTarget == NULL? 0 : psTarget->id, weapon_slot);
+	syncDebugBacktrace();
 
 	/* get muzzle offset */
 	if (psAttacker == NULL)
