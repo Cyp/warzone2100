@@ -831,11 +831,15 @@ void actionSanity(DROID *psDroid)
 	                     (psDroid->action == DACTION_ATTACK || psDroid->action == DACTION_MOVEFIRE || psDroid->action == DACTION_MOVETOATTACK ||
 	                      psDroid->action == DACTION_ROTATETOATTACK || psDroid->action == DACTION_VTOLATTACK);
 
+syncDebug("A");
+syncDebugDroid(psDroid, 'A');
 	// clear the target if it has died
 	for (int i = 0; i < DROID_MAXWEAPS; i++)
 	{
 		if (psDroid->psActionTarget[i] && (avoidOverkill? aiObjectIsProbablyDoomed(psDroid->psActionTarget[i]) : psDroid->psActionTarget[i]->died))
 		{
+syncDebug("B %d", i);
+syncDebugDroid(psDroid, 'B');
 			setDroidActionTarget(psDroid, NULL, i);
 			if (i == 0)
 			{
@@ -884,6 +888,8 @@ void actionUpdateDroid(DROID *psDroid)
 
 	actionSanity(psDroid);
 
+syncDebug("C");
+syncDebugDroid(psDroid, 'C');
 	//if the droid has been attacked by an EMP weapon, it is temporarily disabled
 	if (psDroid->lastHitWeapon == WSC_EMP)
 	{
@@ -917,6 +923,8 @@ void actionUpdateDroid(DROID *psDroid)
 
 	psTarget = psDroid->psTarget;
 
+syncDebug("D");
+syncDebugDroid(psDroid, 'D');
 	switch (psDroid->action)
 	{
 	case DACTION_NONE:
@@ -1058,6 +1066,8 @@ void actionUpdateDroid(DROID *psDroid)
 		break;
 	case DACTION_MOVEFIRE:
 		// check if vtol is armed
+syncDebug("Da");
+syncDebugDroid(psDroid, 'a');
 		if (vtolEmpty(psDroid))
 		{
 			moveToRearm(psDroid);
@@ -1069,10 +1079,14 @@ void actionUpdateDroid(DROID *psDroid)
 			break;
 		}
 		// loop through weapons and look for target for each weapon
+syncDebug("Db");
+syncDebugDroid(psDroid, 'b');
+
 		bHasTarget = false;
 		for (i = 0; i < psDroid->numWeaps; ++i)
 		{
 			// Does this weapon have a target?
+syncDebug("Dbæ %d", psDroid->psActionTarget[i]? psDroid->psActionTarget[i]->id : 0);
 			if (psDroid->psActionTarget[i] != NULL)
 			{
 				// Is target worth shooting yet?
@@ -1098,6 +1112,7 @@ void actionUpdateDroid(DROID *psDroid)
 				BASE_OBJECT *psTemp;
 				if (aiBestNearestTarget(psDroid, &psTemp, i) >= 0) // assuming aiBestNearestTarget checks for electronic warfare
 				{
+syncDebug("Dba %d", psTemp? psTemp->id : 0);
 					bHasTarget = true;
 					setDroidActionTarget(psDroid, psTemp, i); // this updates psDroid->psActionTarget[i] to != NULL
 				}
@@ -2279,6 +2294,7 @@ void actionUpdateDroid(DROID *psDroid)
 		ASSERT(!"unknown action", "unknown action");
 		break;
 	}
+syncDebug("E");
 
 	if (psDroid->action != DACTION_MOVEFIRE &&
 		psDroid->action != DACTION_ATTACK &&
@@ -2309,6 +2325,7 @@ void actionUpdateDroid(DROID *psDroid)
 			}
 		}
 	}
+syncDebug("F");
 	CHECK_DROID(psDroid);
 }
 

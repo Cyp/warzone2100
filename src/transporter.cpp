@@ -1289,6 +1289,8 @@ void transporterRemoveDroid(UDWORD id)
 	}
 	if (psDroid)
 	{
+		syncDebugDroid(psDroid, 't');
+
 		/*if we're offWorld we can't pick a tile without swapping the map
 		pointers - can't be bothered so just do this...*/
 		if (onMission)
@@ -1364,6 +1366,8 @@ void transporterRemoveDroid(UDWORD id)
 			//make sure the button isn't flashing
 			stopMissionButtonFlash(IDTRANS_LAUNCH);
 		}
+
+		syncDebugDroid(psDroid, 'T');
 	}
 
 	// we want to sync with all clients *now*.
