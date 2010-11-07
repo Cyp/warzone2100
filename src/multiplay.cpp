@@ -555,6 +555,7 @@ Vector3i cameraToHome(UDWORD player,bool scroll)
 // ////////////////////////////////////////////////////////////////////////////
 // ////////////////////////////////////////////////////////////////////////////
 // Recv Messages. Get a message and dispatch to relevant function.
+#include "structure.h"
 bool recvMessage(void)
 {
 	NETQUEUE queue;
@@ -564,6 +565,11 @@ bool recvMessage(void)
 	{
 		bool processedMessage1 = false;
 		bool processedMessage2 = false;
+
+if (apsStructLists[0] != NULL)
+{
+	CHECK_STRUCTURE(apsStructLists[0]);
+}
 
 		if (queue.queueType == QUEUE_GAME)
 		{
@@ -774,6 +780,11 @@ bool recvMessage(void)
 		}
 
 		NETpop(queue);
+
+if (apsStructLists[0] != NULL)
+{
+	CHECK_STRUCTURE(apsStructLists[0]);
+}
 	}
 
 	return true;
