@@ -566,11 +566,6 @@ bool recvMessage(void)
 		bool processedMessage1 = false;
 		bool processedMessage2 = false;
 
-if (apsStructLists[0] != NULL)
-{
-	CHECK_STRUCTURE(apsStructLists[0]);
-}
-
 		if (queue.queueType == QUEUE_GAME)
 		{
 			syncDebug("Processing player %d, message %s", queue.index, messageTypeToString(type));
@@ -780,11 +775,6 @@ if (apsStructLists[0] != NULL)
 		}
 
 		NETpop(queue);
-
-if (apsStructLists[0] != NULL)
-{
-	CHECK_STRUCTURE(apsStructLists[0]);
-}
 	}
 
 	return true;
