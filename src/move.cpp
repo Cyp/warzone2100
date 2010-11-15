@@ -2401,7 +2401,9 @@ void moveUpdateDroid(DROID *psDroid)
 		}
 		break;
 	case MOVEWAITROUTE:
+syncDebugDroid(psDroid, '&');
 		moveDroidTo(psDroid, psDroid->sMove.destination.x, psDroid->sMove.destination.y);
+syncDebugDroid(psDroid, '$');
 		moveSpeed = MAX(0, psDroid->sMove.speed - 1);
 		break;
 	case MOVENAVIGATE:

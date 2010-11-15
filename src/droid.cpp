@@ -4537,8 +4537,6 @@ void droidSetPosition(DROID *psDroid, int x, int y)
 /** Check validity of a droid. Crash hard if it fails. */
 void checkDroid(const DROID *droid, const char *const location, const char *function, const int recurse)
 {
-	int i;
-
 	if (recurse < 0)
 	{
 		return;

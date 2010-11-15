@@ -7822,8 +7822,6 @@ bool structureCheckReferences(STRUCTURE *psVictimStruct)
 
 void checkStructure(const STRUCTURE* psStructure, const char * const location_description, const char * function, const int recurse)
 {
-	unsigned int i;
-
 	if (recurse < 0)
 		return;
 
