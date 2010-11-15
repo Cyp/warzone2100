@@ -369,6 +369,7 @@ void orderUpdateDroid(DROID *psDroid)
 			psDroid->order = DORDER_NONE;
 			setDroidTarget(psDroid, NULL);
 			psDroid->psTarStats = NULL;
+syncDebug("psTarStatsH = %s\n", psDroid->psTarStats? "!" : "?");
 		}
 		break;
 	case DORDER_TRANSPORTOUT:
@@ -401,6 +402,7 @@ void orderUpdateDroid(DROID *psDroid)
 			    psDroid->order = DORDER_NONE;
 				setDroidTarget(psDroid, NULL);
 			    psDroid->psTarStats = NULL;
+syncDebug("psTarStatsI = %s\n", psDroid->psTarStats? "!" : "?");
             }
 		}
 		break;
@@ -412,6 +414,7 @@ void orderUpdateDroid(DROID *psDroid)
 			psDroid->order = DORDER_NONE;
 			setDroidTarget(psDroid, NULL);
 			psDroid->psTarStats = NULL;
+syncDebug("psTarStatsJ = %s\n", psDroid->psTarStats? "!" : "?");
 
 //FFS! You only wan't to do this if the droid being tracked IS the transporter! Not all the time!
 // What about if your happily playing the game and tracking a droid, and re-enforcements come in!
@@ -452,6 +455,7 @@ void orderUpdateDroid(DROID *psDroid)
 			psDroid->order = DORDER_NONE;
 			setDroidTarget(psDroid, NULL);
 			psDroid->psTarStats = NULL;
+syncDebug("psTarStatsM = %s\n", psDroid->psTarStats? "!" : "?");
 		}
 		break;
 	case DORDER_RECOVER:
@@ -821,6 +825,7 @@ void orderUpdateDroid(DROID *psDroid)
 					orderDroid(psDroid, DORDER_STOP, ModeImmediate);
 					setDroidTarget(psDroid, NULL);
 					psDroid->psTarStats = NULL;
+syncDebug("psTarStatsN = %s\n", psDroid->psTarStats? "!" : "?");
 					secondarySetState(psDroid, DSO_RETURN_TO_LOC, DSS_NONE);
 
 					/* We must add the droid to the transporter only *after*
@@ -945,6 +950,7 @@ void orderUpdateDroid(DROID *psDroid)
 				psDroid->order = DORDER_NONE;
 				setDroidTarget(psDroid, NULL);
 				psDroid->psTarStats = NULL;
+syncDebug("psTarStatsO = %s\n", psDroid->psTarStats? "!" : "?");
 				break;
 			}
 
@@ -1506,6 +1512,7 @@ void orderDroidBase(DROID *psDroid, DROID_ORDER_DATA *psOrder)
 		psDroid->order = DORDER_NONE;
 		setDroidTarget(psDroid, NULL);
 		psDroid->psTarStats = NULL;
+syncDebug("psTarStatsP = %s\n", psDroid->psTarStats? "!" : "?");
 		psDroid->orderX = 0;
 		psDroid->orderY = 0;
 		psDroid->orderX2 = 0;
