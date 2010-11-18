@@ -1168,6 +1168,7 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 		break;
 	case DACTION_ATTACK:
 	case DACTION_ROTATETOATTACK:
+syncDebugDroid(psDroid, '1');
 		ASSERT_OR_RETURN( , psDroid->psActionTarget[0] != NULL, "target is NULL while attacking");
 
 		if (psDroid->action == DACTION_ROTATETOATTACK)
@@ -1185,6 +1186,7 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 		{
 			for (i = 0;i < psDroid->numWeaps;i++)
 			{
+syncDebugDroid(psDroid, '2');
 				setDroidActionTarget(psDroid, NULL, i);
 			}
 			psDroid->action = DACTION_NONE;
@@ -1192,9 +1194,11 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 		}
 
 		bHasTarget = false;
+syncDebugDroid(psDroid, '3');
 		for (i = 0;i < psDroid->numWeaps;i++)
 		{
 			BASE_OBJECT* psActionTarget;
+syncDebugDroid(psDroid, '4');
 
 			if (i > 0)
 			{
@@ -1204,6 +1208,7 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 				    validTarget(psDroid, psDroid->psActionTarget[0], i) &&
 				    actionInRange(psDroid, psDroid->psActionTarget[0], i))
 				{
+syncDebugDroid(psDroid, '5');
 					setDroidActionTarget(psDroid, psDroid->psActionTarget[0], i);
 				}
 				// If we still don't have a target, try to find one
@@ -1212,6 +1217,7 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 					if (psDroid->psActionTarget[i] == NULL &&
 					aiChooseTarget(psDroid, &psTargets[i], i, false, NULL))  // Can probably just use psTarget instead of psTargets[i], and delete the psTargets variable.
 					{
+syncDebugDroid(psDroid, '6');
 						setDroidActionTarget(psDroid, psTargets[i], i);
 					}
 				}
@@ -1219,10 +1225,12 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 
 			if (psDroid->psActionTarget[i])
 			{
+syncDebugDroid(psDroid, '8');
 				psActionTarget = psDroid->psActionTarget[i];
 			}
 			else
 			{
+syncDebugDroid(psDroid, '9');
 				psActionTarget = psDroid->psActionTarget[0];
 			}
 
@@ -1231,30 +1239,36 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 			 && actionInRange(psDroid, psActionTarget, i))
 			{
 				WEAPON_STATS* const psWeapStats = &asWeaponStats[psDroid->asWeaps[i].nStat];
+syncDebugDroid(psDroid, 'a');
 				bHasTarget = true;
 				if (validTarget(psDroid, psActionTarget, i))
 				{
 					int dirDiff = 0;
+syncDebugDroid(psDroid, 'b');
 
 					if (!psWeapStats->rotate)
 					{
 						// no rotating turret - need to check aligned with target
 						const uint16_t targetDir = calcDirection(psDroid->pos.x, psDroid->pos.y, psActionTarget->pos.x, psActionTarget->pos.y);
+syncDebugDroid(psDroid, 'c');
 						dirDiff = abs(angleDelta(targetDir - psDroid->rot.direction));
 					}
 
 					if (dirDiff > FIXED_TURRET_DIR)
 					{
+syncDebugDroid(psDroid, 'd');
 						if (i > 0)
 						{
 							if (psDroid->psActionTarget[i] != psDroid->psActionTarget[0])
 							{
+syncDebugDroid(psDroid, 'e');
 								// Nope, can't shoot this, try something else next time
 								setDroidActionTarget(psDroid, NULL, i);
 							}
 						}
 						else if (psDroid->sMove.Status != MOVESHUFFLE)
 						{
+syncDebugDroid(psDroid, 'f');
 							psDroid->action = DACTION_ROTATETOATTACK;
 							moveTurnDroid(psDroid, psActionTarget->pos.x, psActionTarget->pos.y);
 						}
@@ -1262,6 +1276,7 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 					else if (!psWeapStats->rotate ||
 							actionTargetTurret(psDroid, psActionTarget, &psDroid->asWeaps[i]))
 					{
+syncDebugDroid(psDroid, 'g');
 						/* In range - fire !!! */
 						combFire(&psDroid->asWeaps[i], psDroid, psActionTarget, i);
 					}
@@ -1269,18 +1284,21 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 				else if (i > 0)
 				{
 					// Nope, can't shoot this, try something else next time
+syncDebugDroid(psDroid, 'h');
 					setDroidActionTarget(psDroid, NULL, i);
 				}
 			}
 			else if (i > 0)
 			{
 				// Nope, can't shoot this, try something else next time
+syncDebugDroid(psDroid, 'i');
 				setDroidActionTarget(psDroid, NULL, i);
 			}
 		}
 
 		if (!bHasTarget)
 		{
+syncDebugDroid(psDroid, 'j');
 			if (((psDroid->order == DORDER_ATTACKTARGET
 			   || psDroid->order == DORDER_FIRESUPPORT)
 			  && secondaryGetState(psDroid, DSO_HALTTYPE) == DSS_HALT_HOLD)
@@ -1292,13 +1310,16 @@ syncDebug("Dba %d", psTemp? psTemp->id : 0);
 			{
 				// don't move if on hold or firesupport for a sensor tower
 				// also don't move if we're holding position or waiting for repair
+syncDebugDroid(psDroid, 'k');
 				psDroid->action = DACTION_NONE;				// holding, cancel the order.
 			}
 			else
 			{
+syncDebugDroid(psDroid, 'l');
 				psDroid->action = DACTION_MOVETOATTACK;	// out of range - chase it
 			}
 		}
+syncDebugDroid(psDroid, 'm');
 
 		break;
 
@@ -2304,7 +2325,7 @@ syncDebugDroid(psDroid, ')');
 		ASSERT(!"unknown action", "unknown action");
 		break;
 	}
-syncDebug("E");
+syncDebugDroid(psDroid, 'E');
 
 	if (psDroid->action != DACTION_MOVEFIRE &&
 		psDroid->action != DACTION_ATTACK &&
