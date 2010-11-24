@@ -83,6 +83,7 @@
 #include "combat.h"
 #include "scriptfuncs.h"			//for ThreatInRange()
 #include "design.h"					//for GetDefaultTemplateName
+#include "lib/framework/crc.h"
 
 #define DEFAULT_RECOIL_TIME	(GAME_TICKS_PER_SEC/4)
 #define	DROID_DAMAGE_SPREAD	(16 - rand()%32)
@@ -709,7 +710,7 @@ void _syncDebugDroid(const char *function, DROID const *psDroid, char ch)
 		actTarLen += sprintf(actTar + actTarLen, "_%u", psDroid->psActionTarget[i]? psDroid->psActionTarget[i]->id : 0);
 	}
 
-	_syncDebug(function, "%c droid%d = p%d;pos(%d.%d,%d.%d,%d),rot(%d,%d,%d),ord%d(%d,%d)^%d,act%d%s,so%X,bp%d,sMove(st%d,spd%d,mdir%d,path%d/%d,src(%d,%d),tar(%d,%d),dst(%d,%d),bump(%d,%d,%d,%d,(%d,%d),%d)),exp%u, power = %"PRId64" MEOW%c", ch,
+	_syncDebug(function, "%c droid%d = p%d;pos(%d.%d,%d.%d,%d),rot(%d,%d,%d),ord%d(%d,%d)^%d,act%d%s,so%X,dType%d,bp%d,sMove(st%d,spd%d,mdir%d,path%d/%d,src(%d,%d),tar(%d,%d),dst(%d,%d),bump(%d,%d,%d,%d,(%d,%d),%d)),exp%u,aux%08X,block%08X, power = %"PRId64" MEOW%c", ch,
 	          psDroid->id,
 
 	          psDroid->player,
@@ -718,6 +719,7 @@ void _syncDebugDroid(const char *function, DROID const *psDroid, char ch)
 	          psDroid->order, psDroid->orderX, psDroid->orderY, psDroid->listSize,
 	          psDroid->action, actTar,
 	          psDroid->secondaryOrder,
+	          psDroid->droidType,
 	          psDroid->body,
 	          psDroid->sMove.Status,
 	          psDroid->sMove.speed, psDroid->sMove.moveDir,
@@ -725,6 +727,8 @@ void _syncDebugDroid(const char *function, DROID const *psDroid, char ch)
 	          psDroid->sMove.src.x, psDroid->sMove.src.y, psDroid->sMove.target.x, psDroid->sMove.target.y, psDroid->sMove.destination.x, psDroid->sMove.destination.y,
 	          psDroid->sMove.bumpDir, psDroid->sMove.bumpTime, psDroid->sMove.lastBump, psDroid->sMove.pauseTime, psDroid->sMove.bumpX, psDroid->sMove.bumpY, psDroid->sMove.shuffleStart,
 	          psDroid->experience,
+	          ~crcSum(0, psAuxMap[psDroid->player], mapWidth*mapHeight*0),
+	          ~crcSum(0, psBlockMap[0], mapWidth*mapHeight*0),
 
 	          getPrecisePower(psDroid->player),
 
