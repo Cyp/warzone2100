@@ -1242,6 +1242,7 @@ bool map_Intersect(int* Cx, int* Cy, int* Vx, int* Vy, int* Sx, int* Sy)
 	return false;
 }
 
+extern bool megadebug;
 /// The max height of the terrain and water at the specified world coordinates
 extern int32_t map_Height(int x, int y)
 {
@@ -1283,6 +1284,8 @@ extern int32_t map_Height(int x, int y)
 		}
 	}
 	center /= 4;
+if (megadebug)
+syncDebug("map_Height using (%d,%d),(%d,%d),(%d,%d,%d,%d),%d", tileX, tileY, onTileX, onTileY, height[0][0], height[0][1], height[1][0], height[1][1], center);
 
 	// we have:
 	//   y ->
@@ -1802,11 +1805,8 @@ static int dangerThreadFunc(WZ_DECL_UNUSED void *data)
 {
 	while (lastDangerPlayer != -1)
 	{
-if (rand()%4000 == 0) SDL_Delay(2500);
 		dangerFloodFill(lastDangerPlayer);	// Do the actual work
-if (rand()%4000 == 0) SDL_Delay(2500);
 		wzSemaphorePost(dangerDoneSemaphore);   // Signal that we are done
-if (rand()%4000 == 0) SDL_Delay(2500);
 		wzSemaphoreWait(dangerSemaphore);	// Go to sleep until needed.
 	}
 	return 0;
