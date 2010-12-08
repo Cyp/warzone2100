@@ -2597,6 +2597,7 @@ UDWORD getMaxDroids(UDWORD PlayerNumber)
 bool IsPlayerDroidLimitReached(UDWORD PlayerNumber)
 {
 	unsigned int numDroids = getNumDroids(PlayerNumber) + getNumMissionDroids(PlayerNumber) + getNumTransporterDroids(PlayerNumber);
+syncDebug("numDroids = %d+%d+%d\n", getNumDroids(PlayerNumber), getNumMissionDroids(PlayerNumber), getNumTransporterDroids(PlayerNumber));
 
 	return numDroids >= getMaxDroids(PlayerNumber);
 }
