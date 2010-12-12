@@ -1,0 +1,6 @@
+syntax: glob
+
+# Mac clutter
+.DS_Store
+Icon?
+._*
