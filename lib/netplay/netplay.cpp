@@ -2384,7 +2384,7 @@ bool NETcheckPlayerConnectionStatus(CONNECTION_STATUS status, unsigned player)
 }
 
 #define MAX_LEN_LOG_LINE 512  // From debug.c - no use printing something longer.
-#define MAX_SYNC_MESSAGES 20000
+#define MAX_SYNC_MESSAGES 200000
 #define MAX_SYNC_HISTORY 12
 
 static unsigned syncDebugNext = 0;
@@ -2510,7 +2510,7 @@ static void sendDebugSync(uint8_t *buf, uint32_t bufLen, uint32_t time)
 	NETend();
 }
 
-static uint8_t debugSyncTmpBuf[2000000];
+static uint8_t debugSyncTmpBuf[10000000];
 static void recvDebugSync(NETQUEUE queue)
 {
 	uint32_t time = 0;
