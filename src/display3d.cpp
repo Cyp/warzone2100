@@ -1526,6 +1526,11 @@ static void renderBuildOrder(int32_t order, BASE_STATS *stats, int32_t x, int32_
 
 void displayBlueprints(void)
 {
+	if (selectedPlayer == PLAYER_OBSERVER)
+	{
+		return;
+	}
+
 	STRUCTURE *blueprint;
 	DROID *psDroid;
 	int order;
@@ -1638,6 +1643,11 @@ void displayBlueprints(void)
 /// Draw Factory Delivery Points
 void displayDelivPoints(void)
 {
+	if (selectedPlayer == PLAYER_OBSERVER)
+	{
+		return;
+	}
+
 	FLAG_POSITION	*psDelivPoint;
 
 	//only do the selected players'

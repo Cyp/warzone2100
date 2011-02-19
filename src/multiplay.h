@@ -24,6 +24,8 @@
 #ifndef __INCLUDED_SRC_MULTIPLAY_H__
 #define __INCLUDED_SRC_MULTIPLAY_H__
 
+#include "lib/netplay/netplay.h"
+
 #include "featuredef.h"
 #include "group.h"
 #include "featuredef.h"
@@ -166,7 +168,7 @@ extern int whosResponsible(int player);
 int scavengerSlot();    // Returns the player number that scavengers would have if they were enabled.
 int scavengerPlayer();  // Returns the player number that the scavengers have, or -1 if disabled.
 extern Vector3i cameraToHome		(UDWORD player,bool scroll);
-extern char		playerName[MAX_PLAYERS][MAX_STR_LENGTH];	//Array to store all player names (humans and AIs)
+extern char playerName[MAX_CONNECTED_PLAYERS][MAX_STR_LENGTH];  //Array to store all player names (humans and AIs)
 
 extern bool	multiPlayerLoop		(void);							// for loop.c
 

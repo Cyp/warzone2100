@@ -58,7 +58,7 @@ bool SendBuildFinished(STRUCTURE *psStruct)
 	uint8_t player = psStruct->player;
 	ASSERT( player < MAX_PLAYERS, "invalid player %u", player);
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_BUILDFINISHED);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_BUILDFINISHED);
 		NETuint32_t(&psStruct->id);		// ID of building
 
 		// Along with enough info to build it (if needed)
@@ -152,7 +152,7 @@ bool recvBuildFinished(NETQUEUE queue)
 // demolish message.
 bool SendDemolishFinished(STRUCTURE *psStruct, DROID *psDroid)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_DEMOLISH);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_DEMOLISH);
 
 		// Send what is being demolish and who is doing it
 		NETuint32_t(&psStruct->id);
@@ -200,7 +200,7 @@ bool recvDemolishFinished(NETQUEUE queue)
 bool SendDestroyStructure(STRUCTURE *s)
 {
 	technologyGiveAway(s);
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_STRUCTDEST);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_STRUCTDEST);
 
 	// Struct to destroy
 	NETuint32_t(&s->id);
@@ -240,7 +240,7 @@ bool recvDestroyStructure(NETQUEUE queue)
 
 bool sendLasSat(UBYTE player, STRUCTURE *psStruct, BASE_OBJECT *psObj)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_LASSAT);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_LASSAT);
 
 		NETuint8_t(&player);
 		NETuint32_t(&psStruct->id);
@@ -287,7 +287,7 @@ void sendStructureInfo(STRUCTURE *psStruct, STRUCTURE_INFO structureInfo_, DROID
 	uint32_t structId = psStruct->id;
 	uint8_t  structureInfo = structureInfo_;
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_STRUCTUREINFO);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_STRUCTUREINFO);
 		NETuint8_t(&player);
 		NETuint32_t(&structId);
 		NETuint8_t(&structureInfo);

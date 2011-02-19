@@ -170,7 +170,7 @@ bool sendDroidEmbark(const DROID* psDroid, const DROID* psTransporter)
 	if (!bMultiMessages)
 		return true;
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_DROIDEMBARK);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_DROIDEMBARK);
 	{
 		uint8_t player = psDroid->player;
 		uint32_t droidID = psDroid->id;
@@ -259,7 +259,7 @@ bool sendDroidDisEmbark(const DROID* psDroid, const DROID* psTransporter)
 	if (!bMultiMessages)
 		return true;
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_DROIDDISEMBARK);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_DROIDDISEMBARK);
 	{
 		uint8_t player = psDroid->player;
 		uint32_t droidID = psDroid->id;
@@ -378,7 +378,7 @@ bool SendDroid(const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, uint8_t 
 	}
 
 	debug(LOG_SYNC, "Droid sent with id of %u", id);
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_DROID);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_DROID);
 	{
 		Position pos(x, y, 0);
 		uint32_t templateID = pTemplate->multiPlayerID;
@@ -536,7 +536,7 @@ void sendQueuedDroidInfo()
 		for (eqEnd = eqBegin + 1; eqEnd != queuedOrders.end() && eqEnd->orderCompare(*eqBegin) == 0; ++eqEnd)
 		{}
 
-		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_DROIDINFO);
+		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_DROIDINFO);
 			NETQueuedDroidInfo(&*eqBegin);
 
 			uint32_t num = eqEnd - eqBegin;
@@ -786,7 +786,7 @@ bool SendDestroyDroid(const DROID* psDroid)
 		return true;
 	}
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_DROIDDEST);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_DROIDDEST);
 	{
 		uint32_t id = psDroid->id;
 

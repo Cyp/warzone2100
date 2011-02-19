@@ -54,7 +54,7 @@ void	avUpdateTiles( void )
 		if (psTile->level > MIN_ILLUM || psTile->tileExploredBits & playermask)	// seen
 		{
 			// If we are not omniscient, and we are not seeing the tile, and none of our allies see the tile...
-			if (!godMode && !(alliancebits[selectedPlayer] & (satuplinkbits | psTile->sensorBits)))
+			if (!godMode && !(alliancebits[selectedPlayer] & (satuplinkbits | psTile->sensorBits)) && selectedPlayer != PLAYER_OBSERVER)
 			{
 				maxLevel /= 2;
 			}

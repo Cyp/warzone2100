@@ -572,8 +572,8 @@ bool intInitialise(void)
 
 	widgSetTipFont(psWScreen, font_regular);
 
-	if(GetGameMode() == GS_NORMAL) {
-
+	if (GetGameMode() == GS_NORMAL && selectedPlayer != PLAYER_OBSERVER)
+	{
 		if (!intAddReticule())
 		{
 			debug( LOG_ERROR, "intInitialise: Couldn't create reticule widgets (Out of memory ?)" );
@@ -1211,8 +1211,10 @@ static void intProcessOptions(UDWORD id)
 	if (id >= IDOPT_PLAYERSTART && id <= IDOPT_PLAYEREND)
 	{
 		widgSetButtonState(psWScreen, IDOPT_PLAYERSTART + selectedPlayer, 0);
+		interfaceShutDown();
 		selectedPlayer = id - IDOPT_PLAYERSTART;
 		// Do not change realSelectedPlayer here, so game doesn't pause.
+		intInitialise();
 		widgSetButtonState(psWScreen, IDOPT_PLAYERSTART + selectedPlayer, WBUT_LOCK);
 	}
 	else
@@ -3697,11 +3699,11 @@ bool intAddOptions(void)
 	sButInit.y = OPT_BUTHEIGHT + OPT_GAP*2;
 	sButInit.width = OPT_BUTWIDTH;
 	sButInit.height = OPT_BUTHEIGHT;
-	for(player = 0; player < MAX_PLAYERS; player++)
+	for(player = 0; player < MAX_PLAYERS + 1; player++)
 	{
 		STATIC_ASSERT(MAX_PLAYERS <= ARRAY_SIZE(apPlayerText) && MAX_PLAYERS <= ARRAY_SIZE(apPlayerTip));
-		sButInit.pText = apPlayerText[player];
-		sButInit.pTip = apPlayerTip[player];
+		sButInit.pText = player != PLAYER_OBSERVER? apPlayerText[player] : "OBS";
+		sButInit.pTip  = player != PLAYER_OBSERVER? apPlayerTip[player]  : "Observer";
 		if (!widgAddButton(psWScreen, &sButInit))
 		{
 			return false;

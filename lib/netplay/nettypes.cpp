@@ -66,9 +66,6 @@ static PACKETDIR NetDir;      ///< Indicates whether a message is being serialis
 static void NETsetPacketDir(PACKETDIR dir)
 {
 	NetDir = dir;
-
-	// Can't put STATIC_ASSERT in global scope, arbitrarily putting it here.
-	STATIC_ASSERT(MAX_PLAYERS == MAX_CONNECTED_PLAYERS);  // Things might break if each connected player doesn't correspond to a player of the same index.
 }
 
 PACKETDIR NETgetPacketDir()

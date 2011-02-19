@@ -897,6 +897,7 @@ bool registerFunctions(QScriptEngine *engine)
 	engine->globalObject().setProperty("BEING_BUILT", SS_BEING_BUILT, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("BUILT", SS_BUILT, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	engine->globalObject().setProperty("BEING_DEMOLISHED", SS_BEING_DEMOLISHED, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+	engine->globalObject().setProperty("PLAYER_OBSERVER", PLAYER_OBSERVER, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 
 	return true;
 }

@@ -135,7 +135,8 @@ enum MESSAGE_TYPES
 #define modlist_string_size	255		// For a concatenated list of mods
 #define password_string_size 64		// longer passwords slow down the join code
 
-#define MAX_CONNECTED_PLAYERS   MAX_PLAYERS
+#define MAX_OBSERVERS           10
+#define MAX_CONNECTED_PLAYERS   (MAX_PLAYERS + MAX_OBSERVERS)
 #define MAX_TMP_SOCKETS         16
 
 // ////////////////////////////////////////////////////////////////////////
@@ -220,7 +221,7 @@ struct PLAYER
 // all the luvly Netplay info....
 struct NETPLAY
 {
-	PLAYER		players[MAX_PLAYERS];	///< The array of players.
+	PLAYER          players[MAX_CONNECTED_PLAYERS];         ///< The array of players.
 	uint32_t	maxPlayers;				///< Maximum number of players.
 	uint32_t	playercount;		///< Number of players in game.
 	uint32_t	hostPlayer;		///< Index of host in player array

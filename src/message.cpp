@@ -46,10 +46,10 @@ static UDWORD	msgID = 0;
 
 static int currentNumProxDisplays;
 /* The list of messages allocated */
-MESSAGE		*apsMessages[MAX_PLAYERS];
+MESSAGE		*apsMessages[MAX_PLAYER_SLOTS];
 
 /* The list of proximity displays allocated */
-PROXIMITY_DISPLAY *apsProxDisp[MAX_PLAYERS];
+PROXIMITY_DISPLAY *apsProxDisp[MAX_PLAYER_SLOTS];
 
 /* The IMD to use for the proximity messages */
 iIMDShape	*pProximityMsgIMD;
@@ -238,12 +238,11 @@ static inline void releaseAllMessages(MESSAGE *list[])
 
 bool messageInitVars(void)
 {
-	int i;
-
 	msgID = 0;
 	currentNumProxDisplays = 0;
 
-	for(i=0; i<MAX_PLAYERS; i++) {
+	for (int i = 0; i < MAX_PLAYER_SLOTS; ++i)
+	{
 		apsMessages[i] = NULL;
 		apsProxDisp[i] = NULL;
 	}

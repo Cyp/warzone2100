@@ -81,7 +81,7 @@ MULTIPLAYERGAME				game;									//info to describe game.
 MULTIPLAYERINGAME			ingame;
 
 char						beaconReceiveMsg[MAX_PLAYERS][MAX_CONSOLE_STRING_LENGTH];	//beacon msg for each player
-char								playerName[MAX_PLAYERS][MAX_STR_LENGTH];	//Array to store all player names (humans and AIs)
+char                                            playerName[MAX_CONNECTED_PLAYERS][MAX_STR_LENGTH];  //Array to store all player names (humans and AIs)
 bool						bPlayerReadyGUI[MAX_PLAYERS] = {false};
 
 /////////////////////////////////////
@@ -426,7 +426,7 @@ BASE_OBJECT *IdToPointer(UDWORD id,UDWORD player)
 // return a players name.
 const char* getPlayerName(int player)
 {
-	ASSERT_OR_RETURN(NULL, player < MAX_PLAYERS , "Wrong player index: %u", player);
+	ASSERT_OR_RETURN(NULL, player < MAX_CONNECTED_PLAYERS, "Wrong player index: %u", player);
 
 	if (game.type != CAMPAIGN)
 	{
@@ -447,7 +447,7 @@ const char* getPlayerName(int player)
 
 bool setPlayerName(int player, const char *sName)
 {
-	ASSERT_OR_RETURN(false, player < MAX_PLAYERS && player >= 0, "Player index (%u) out of range", player);
+	ASSERT_OR_RETURN(false, player < MAX_CONNECTED_PLAYERS && player >= 0, "Player index (%u) out of range", player);
 	sstrcpy(playerName[player], sName);
 	return true;
 }
@@ -785,7 +785,7 @@ bool recvMessage(void)
 bool SendResearch(uint8_t player, uint32_t index, bool trigger)
 {
 	// Send the player that is researching the topic and the topic itself
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_RESEARCH);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_RESEARCH);
 		NETuint8_t(&player);
 		NETuint32_t(&index);
 	NETend();
@@ -861,7 +861,7 @@ bool sendResearchStatus(STRUCTURE *psBuilding, uint32_t index, uint8_t player, b
 		return true;
 	}
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_RESEARCHSTATUS);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_RESEARCHSTATUS);
 		NETuint8_t(&player);
 		NETbool(&bStart);
 
@@ -1369,7 +1369,7 @@ static void NETtemplate(DROID_TEMPLATE *pTempl)
 // send a newly created template to other players
 bool sendTemplate(uint32_t player, DROID_TEMPLATE *pTempl)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_TEMPLATE);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_TEMPLATE);
 		NETuint32_t(&player);
 		NETtemplate(pTempl);
 	return NETend();
@@ -1420,7 +1420,7 @@ bool SendDestroyTemplate(DROID_TEMPLATE *t)
 {
 	uint8_t player = selectedPlayer;
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_TEMPLATEDEST);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_TEMPLATEDEST);
 		NETuint8_t(&player);
 		NETuint32_t(&t->multiPlayerID);
 	NETend();
@@ -1487,7 +1487,7 @@ static bool recvDestroyTemplate(NETQUEUE queue)
 // send a destruct feature message.
 bool SendDestroyFeature(FEATURE *pF)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_FEATUREDEST);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_FEATUREDEST);
 		NETuint32_t(&pF->id);
 	return NETend();
 }

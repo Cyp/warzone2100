@@ -204,7 +204,7 @@ bool ForceDroidSync(const DROID* droidToSend)
 
 	debug(LOG_SYNC, "Force sync of droid %u from player %u", droidToSend->id, droidToSend->player);
 
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_CHECK_DROID);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_CHECK_DROID);
 		NETuint8_t(&count);
 		NETuint32_t(&gameTime);  // Send game time.
 		NETauto(&pc);
@@ -236,7 +236,7 @@ static bool sendDroidCheck(void)
 
 	if (!isInSync())  // Don't really send anything, unless out of synch.
 	{
-		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_CHECK_DROID);
+		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_CHECK_DROID);
 	}
 
 		// Allocate space for the list of droids to send
@@ -535,7 +535,7 @@ static bool sendStructureCheck(void)
 		{
 			if (!isInSync())  // Don't really send anything, unless out of synch.
 			{
-				NETbeginEncode(NETgameQueue(selectedPlayer), GAME_CHECK_STRUCT);
+				NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_CHECK_STRUCT);
 					NETuint8_t(&player);
 					NETuint32_t(&gameTime);
 					NETuint32_t(&pS->id);
@@ -706,7 +706,7 @@ static bool sendPowerCheck()
 		{
 			if (!isInSync())  // Don't really send anything, unless out of synch.
 			{
-				NETbeginEncode(NETgameQueue(selectedPlayer), GAME_CHECK_POWER);
+				NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_CHECK_POWER);
 					NETuint8_t(&player);
 					NETuint32_t(&gameTime);
 					NETint64_t(&powerCheckLastPower[player]);

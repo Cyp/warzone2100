@@ -1999,6 +1999,7 @@ CONST_SYMBOL asConstantTable[] =
 	// multiplayer
 
 	{ "MAX_PLAYERS",        VAL_INT,        false,  MAX_PLAYERS,                    NULL, NULL, 0.0f },
+	{ "PLAYER_OBSERVER",    VAL_INT,        false,  PLAYER_OBSERVER,                NULL, NULL, 0.0f },
 
 	{ "CAMPAIGN",		VAL_INT,	false,	CAMPAIGN,			NULL, NULL, 0.0f },
 	{ "SKIRMISH",		VAL_INT,	false,	SKIRMISH,			NULL, NULL, 0.0f },

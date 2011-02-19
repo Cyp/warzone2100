@@ -30,13 +30,13 @@
 #define NO_AUDIO_MSG		-1
 
 /** The lists of messages allocated. */
-extern MESSAGE		*apsMessages[MAX_PLAYERS];
+extern MESSAGE		*apsMessages[MAX_PLAYER_SLOTS];
 
 /** The IMD to use for the proximity messages. */
 extern iIMDShape	*pProximityMsgIMD;
 
 /** The list of proximity displays allocated. */
-extern PROXIMITY_DISPLAY *apsProxDisp[MAX_PLAYERS];
+extern PROXIMITY_DISPLAY *apsProxDisp[MAX_PLAYER_SLOTS];
 
 /** Allocates the viewdata heap. */
 bool initViewData(void);

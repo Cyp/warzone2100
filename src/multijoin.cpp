@@ -200,7 +200,7 @@ static void resetMultiVisibility(UDWORD player)
 
 static void sendPlayerLeft(uint32_t playerIndex)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_PLAYER_LEFT);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_PLAYER_LEFT);
 		NETuint32_t(&playerIndex);
 	NETend();
 }

@@ -167,11 +167,11 @@ static	STRUCTURE_STATS	*g_psStatDestroyStruct = NULL;
 STRUCTURE	*psLastStructHit;
 
 //flag for drawing radar
-static		UBYTE	hqExists[MAX_PLAYERS];
+static bool hqExists[MAX_PLAYERS];
 //flag for drawing all sat uplink sees
-static		UBYTE	satUplinkExists[MAX_PLAYERS];
+static bool satUplinkExists[MAX_PLAYERS];
 //flag for when the player has one built - either completely or partially
-static		UBYTE	lasSatExists[MAX_PLAYERS];
+static bool lasSatExists[MAX_PLAYERS];
 
 static bool setFunctionality(STRUCTURE* psBuilding, STRUCTURE_TYPE functionType);
 static void setFlagPositionInc(FUNCTIONALITY* pFunctionality, UDWORD player, UBYTE factoryType);
@@ -5320,21 +5320,21 @@ STRUCTURE_STATS * structGetDemolishStat( void )
 /*sets the flag to indicate a HQ Exists - so draw Radar*/
 void setHQExists(bool state, UDWORD player)
 {
-	hqExists[player] = (UBYTE)state;
+	hqExists[player] = state;
 }
 
 
 /*returns the status of the flag*/
 bool getHQExists(UDWORD player)
 {
-	return hqExists[player];
+	return player == PLAYER_OBSERVER || hqExists[player];
 }
 
 
 /*sets the flag to indicate a SatUplink Exists - so draw everything!*/
 void setSatUplinkExists(bool state, UDWORD player)
 {
-	satUplinkExists[player] = (UBYTE)state;
+	satUplinkExists[player] = state;
 	if (state)
 	{
 		satuplinkbits |= (1 << player);
@@ -5356,7 +5356,7 @@ bool getSatUplinkExists(UDWORD player)
 /*sets the flag to indicate a Las Sat Exists - ONLY EVER WANT ONE*/
 void setLasSatExists(bool state, UDWORD player)
 {
-	lasSatExists[player] = (UBYTE)state;
+	lasSatExists[player] = state;
 }
 
 
@@ -6150,7 +6150,7 @@ bool electronicDamage(BASE_OBJECT *psTarget, UDWORD damage, UBYTE attackPlayer)
 				{
 					uint8_t giftType = DROID_GIFT;
 
-					NETbeginEncode(NETgameQueue(selectedPlayer), GAME_GIFT);
+					NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 					{
 						// We need to distinguish between gift types
 						NETuint8_t(&giftType);

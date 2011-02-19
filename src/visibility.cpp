@@ -506,7 +506,7 @@ static void processVisibilitySelf(BASE_OBJECT *psObj)
 	// they can see everything!
 	for (viewer = 0; viewer < MAX_PLAYERS; viewer++)
 	{
-		if (getSatUplinkExists(viewer) || (viewer == selectedPlayer && godMode))
+		if (getSatUplinkExists(viewer) || (viewer == selectedPlayer && godMode) || selectedPlayer == PLAYER_OBSERVER)
 		{
 			setSeenBy(psObj, viewer, UBYTE_MAX);
 		}

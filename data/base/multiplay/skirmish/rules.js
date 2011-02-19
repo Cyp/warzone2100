@@ -125,6 +125,11 @@ function eventGameInit()
 // END CONDITIONS
 function checkEndConditions()
 {
+	if (me == PLAYER_OBSERVER)
+	{
+		return;
+	}
+
 	var factories = enumStruct(me, "A0LightFactory").length + enumStruct(me, "A0CyborgFactory").length;
 	var droids = enumDroid(me).length;
 

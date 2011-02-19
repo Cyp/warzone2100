@@ -156,7 +156,7 @@ void giftRadar(uint8_t from, uint8_t to, bool send)
 	{
 		uint8_t subType = RADAR_GIFT;
 
-		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_GIFT);
+		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&subType);
 			NETuint8_t(&from);
 			NETuint8_t(&to);
@@ -244,7 +244,7 @@ static void sendGiftDroids(uint8_t from, uint8_t to)
 		}
 		if (psD->selected)
 		{
-			NETbeginEncode(NETgameQueue(selectedPlayer), GAME_GIFT);
+			NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&giftType);
 			NETuint8_t(&from);
 			NETuint8_t(&to);
@@ -271,7 +271,7 @@ static void giftResearch(uint8_t from, uint8_t to, bool send)
 	{
 		uint8_t giftType = RESEARCH_GIFT;
 
-		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_GIFT);
+		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&giftType);
 			NETuint8_t(&from);
 			NETuint8_t(&to);
@@ -310,7 +310,7 @@ void giftPower(uint8_t from, uint8_t to, uint32_t amount, bool send)
 	{
 		uint8_t giftType = POWER_GIFT;
 
-		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_GIFT);
+		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&giftType);
 			NETuint8_t(&from);
 			NETuint8_t(&to);
@@ -470,7 +470,7 @@ void formAlliance(uint8_t p1, uint8_t p2, bool prop, bool allowAudio, bool allow
 
 void sendAlliance(uint8_t from, uint8_t to, uint8_t state, int32_t value)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_ALLIANCE);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_ALLIANCE);
 		NETuint8_t(&from);
 		NETuint8_t(&to);
 		NETuint8_t(&state);
@@ -540,7 +540,7 @@ void  technologyGiveAway(const STRUCTURE *pS)
 			ASSERT(false, "technologyGiveAway: Unable to find a free location");
 		}
 
-		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_ARTIFACTS);
+		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_ARTIFACTS);
 		{
 			/* Make sure that we don't have to violate the constness of pS.
 			 * Since the nettype functions aren't const correct when sending
@@ -566,7 +566,7 @@ void  technologyGiveAway(const STRUCTURE *pS)
  */
 void sendMultiPlayerFeature(FEATURE_TYPE subType, uint32_t x, uint32_t y, uint32_t id)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_FEATURES);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_FEATURES);
 	{
 		NETenum(&subType);
 		NETuint32_t(&x);
@@ -630,7 +630,7 @@ void  addMultiPlayerRandomArtifacts(uint8_t quantity, FEATURE_TYPE type)
 	uint8_t		player = ANYPLAYER;
 
 	debug(LOG_FEATURE, "Sending %u artifact(s) type: (%s)", quantity, feature_names[type]);
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_ARTIFACTS);
+	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_ARTIFACTS);
 		NETuint8_t(&quantity);
 		NETenum(&type);
 
