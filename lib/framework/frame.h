@@ -46,12 +46,29 @@
 #include "trig.h"
 #include "cursors.h"
 
-extern uint32_t selectedPlayer;      ///< The player number corresponding to this client.
-extern uint32_t realSelectedPlayer;  ///< The player number corresponding to this client (same as selectedPlayer, unless changing players in the debug menu).
+template<int UniqueInteger>
+struct TypesafeInteger
+{
+	typedef TypesafeInteger<UniqueInteger> This;
+	TypesafeInteger() : val(0) {}
+	explicit TypesafeInteger(unsigned index) : val(index) {}
+	operator int() const { return val; }
+	TypesafeInteger operator ++() { return This(++val); }
+	TypesafeInteger operator ++(int) { return This(val++); }
+	uint32_t val;
+};
+
+typedef TypesafeInteger<1> PlayerIndex;  ///< Player index, typesafe integer.
+typedef TypesafeInteger<2> ClientIndex;  ///< Client index, typesafe integer.
+typedef TypesafeInteger<3> TmpClientIndex;  ///< Temporary client index, typesafe integer.
+
+extern PlayerIndex selectedPlayer;      ///< The player number corresponding to this client, or PLAYER_OBSERVER if the client does not control a human player.
+extern PlayerIndex realSelectedPlayer;  ///< The player number corresponding to this client (same as selectedPlayer, unless changing players in the debug menu).
+extern ClientIndex selectedClient;      ///< The client number corresponding to this client.
 #define MAX_PLAYERS         11                 ///< Maximum number of players in the game.
 #define MAX_PLAYERS_IN_GUI  (MAX_PLAYERS - 1)  ///< One player reserved for scavengers.
-#define PLAYER_OBSERVER     (MAX_PLAYERS + 0)
-#define PLAYER_FEATURE      (MAX_PLAYERS + 1)
+#define PLAYER_OBSERVER     PlayerIndex(MAX_PLAYERS + 0)
+#define PLAYER_FEATURE      PlayerIndex(MAX_PLAYERS + 1)
 #define MAX_PLAYER_SLOTS    (MAX_PLAYERS + 2)  ///< Max players plus 1 baba and 1 reserved for features. Actually, if baba is a regular player, then it's plus 1 unused?
 
 #if MAX_PLAYERS <= 8

@@ -474,20 +474,20 @@ static void NetworkDisplayImage(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset
 		ImageID = UNPACKDWORD_TRI_C(psWidget->UserData);
 	}
 
-	if (NETcheckPlayerConnectionStatus(status, NET_ALL_PLAYERS))
+	if (NETcheckPlayerConnectionStatus(status, NET_ALL_PLAYERSx))
 	{
 		unsigned width, height;
-		unsigned n, c = 0;
+		unsigned c = 0;
 		char players[MAX_PLAYERS + 1];
 		PlayerMask playerMaskMapped = 0;
-		for (n = 0; n < MAX_PLAYERS; ++n)
+		for (PlayerIndex n(0); n < MAX_PLAYERS; ++n)
 		{
 			if (NETcheckPlayerConnectionStatus(status, n))
 			{
-				playerMaskMapped |= 1<<NetPlay.players[n].position;
+				playerMaskMapped |= 1<<n;
 			}
 		}
-		for (n = 0; n < MAX_PLAYERS; ++n)
+		for (PlayerIndex n(0); n < MAX_PLAYERS; ++n)
 		{
 			if ((playerMaskMapped & 1<<n) != 0)
 			{
@@ -517,7 +517,7 @@ static void setupConnectionStatusForm(void)
 
 	for (i = 0; i < CONNECTIONSTATUS_NORMAL; ++i)
 	{
-		if (NETcheckPlayerConnectionStatus((CONNECTION_STATUS)i, NET_ALL_PLAYERS))
+		if (NETcheckPlayerConnectionStatus((CONNECTION_STATUS)i, NET_ALL_PLAYERSx))
 		{
 			statusMask |= 1<<i;
 			++total;

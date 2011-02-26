@@ -1212,7 +1212,7 @@ static void intProcessOptions(UDWORD id)
 	{
 		widgSetButtonState(psWScreen, IDOPT_PLAYERSTART + selectedPlayer, 0);
 		interfaceShutDown();
-		selectedPlayer = id - IDOPT_PLAYERSTART;
+		selectedPlayer = PlayerIndex(id - IDOPT_PLAYERSTART);
 		// Do not change realSelectedPlayer here, so game doesn't pause.
 		intInitialise();
 		widgSetButtonState(psWScreen, IDOPT_PLAYERSTART + selectedPlayer, WBUT_LOCK);
@@ -5142,7 +5142,7 @@ static bool intAddStats(BASE_STATS **ppsStatsList, UDWORD numStats,
 			if(bMultiPlayer)
 			{
 				int labsDone = 0;
-				for (unsigned ii = 0; ii < MAX_PLAYERS && labsDone < 4; ++ii)
+				for (PlayerIndex ii(0); ii < MAX_PLAYERS && labsDone < 4; ++ii)
 				{
 					if(ii != selectedPlayer && aiCheckAlliances(selectedPlayer,ii))
 					{

@@ -1030,11 +1030,11 @@ void	kf_SelectPlayer( void )
 	playerNumber = (getLastSubKey()-KEY_F1);
 	if(playerNumber >= 10)
 	{
-		selectedPlayer = 0;
+		selectedPlayer = PlayerIndex(0);
 	}
 	else
 	{
-		selectedPlayer = playerNumber;
+		selectedPlayer = PlayerIndex(playerNumber);
 	}
 	realSelectedPlayer = selectedPlayer;
 	//	godMode = true;

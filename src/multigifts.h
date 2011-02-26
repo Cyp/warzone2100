@@ -31,7 +31,7 @@ extern void sendAlliance		(uint8_t from, uint8_t to, uint8_t state, int32_t valu
 extern bool recvAlliance                (NETQUEUE queue, bool allowAudio);  // Was declared in multirecv.h, too.
 extern void	createTeamAlliances	(void);
 
-extern bool sendGift			(uint8_t type, uint8_t to);
+bool sendGift(uint8_t type, PlayerIndex to);
 extern bool recvGift                            (NETQUEUE queue);
 
 extern void technologyGiveAway				(const STRUCTURE* pS);

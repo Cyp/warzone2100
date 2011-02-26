@@ -381,7 +381,7 @@ static bool deserializeMultiplayerGame(PHYSFS_file* fileHandle, MULTIPLAYERGAME*
 	return true;
 }
 
-static bool serializePlayer(PHYSFS_file* fileHandle, const PLAYER* serializePlayer, int player)
+static bool serializePlayer(PHYSFS_file* fileHandle, const CLIENT* serializePlayer, int player)
 {
 	return (PHYSFS_writeUBE32(fileHandle, serializePlayer->position)
 	     && PHYSFS_write(fileHandle, serializePlayer->name, StringSize, 1) == 1
@@ -392,7 +392,7 @@ static bool serializePlayer(PHYSFS_file* fileHandle, const PLAYER* serializePlay
 	     && PHYSFS_writeUBE32(fileHandle, serializePlayer->team));
 }
 
-static bool deserializePlayer(PHYSFS_file* fileHandle, PLAYER* serializePlayer, int player)
+static bool deserializePlayer(PHYSFS_file* fileHandle, CLIENT* serializePlayer, int player)
 {
 	char aiName[MAX_LEN_AI_NAME];
 	uint32_t position, colour, team;
@@ -416,7 +416,7 @@ static bool deserializePlayer(PHYSFS_file* fileHandle, PLAYER* serializePlayer, 
 			debug(LOG_ERROR, "AI \"%s\" not found -- script loading will fail (player %d / %d)", aiName, player, game.maxPlayers);
 		}
 	}
-	serializePlayer->position = position;
+	serializePlayer->position = PlayerIndex(position);
 	serializePlayer->colour = colour;
 	serializePlayer->team = team;
 	return retval;
@@ -456,8 +456,8 @@ static bool deserializeNetPlay(PHYSFS_file* fileHandle, NETPLAY* serializeNetPla
 	serializeNetPlay->isHost = true;	// only host can load
 	retv = (PHYSFS_readUBE32(fileHandle, &serializeNetPlay->bComms)
 	        && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->playercount)
-	        && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->hostPlayer)
-	        && PHYSFS_readUBE32(fileHandle, &selectedPlayer)
+	        && PHYSFS_readUBE32(fileHandle, &serializeNetPlay->hostPlayer.val)
+	        && PHYSFS_readUBE32(fileHandle, &selectedPlayer.val)
 	        && PHYSFS_readUBE32(fileHandle, &scavs)
 	        && PHYSFS_readUBE32(fileHandle, &dummy)
 	        && PHYSFS_readUBE32(fileHandle, &dummy));
@@ -1819,9 +1819,9 @@ bool loadGame(const char *pGameToLoad, bool keepObjects, bool freeMem, bool User
 	/* Get human and AI players names */
 	if (saveGameVersion >= VERSION_34)
 	{
-		for(i=0;i<MAX_PLAYERS;i++)
+		for (PlayerIndex i(0); i < MAX_PLAYERS; ++i)
 		{
-			(void)setPlayerName(i, saveGameData.sPlayerName[i]);
+			setPlayerName(clientOf(i), saveGameData.sPlayerName[i]);
 		}
 	}
 
@@ -3579,8 +3579,10 @@ bool gameLoadV(PHYSFS_file* fileHandle, unsigned int version)
 	/* Get human and AI players names */
 	if (saveGameVersion >= VERSION_34)
 	{
-		for(i=0;i<MAX_PLAYERS;i++)
-			(void)setPlayerName(i, saveGameData.sPlayerName[i]);
+		for (PlayerIndex i(0); i < MAX_PLAYERS; ++i)
+		{
+			setPlayerName(clientOf(i), saveGameData.sPlayerName[i]);
+		}
 	}
 
 	clearPlayerPower();
@@ -3781,7 +3783,7 @@ static bool writeGameFile(const char* fileName, SDWORD saveType)
 	}
 
 	//version 34
-	for (i = 0; i < MAX_PLAYERS; ++i)
+	for (PlayerIndex i(0); i < MAX_PLAYERS; ++i)
 	{
 		strcpy(saveGame.sPlayerName[i], getPlayerName(i));
 	}
@@ -4244,7 +4246,7 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission)
 		if (psCurr->psActionTarget[i] != NULL && psCurr->psActionTarget[i]->died <= 1)
 		{
 			ini.setValue("actionTarget/" + QString::number(i) + "/id", psCurr->psActionTarget[i]->id);
-			ini.setValue("actionTarget/" + QString::number(i) + "/player", psCurr->psActionTarget[i]->player);
+			ini.setValue("actionTarget/" + QString::number(i) + "/player", (int)psCurr->psActionTarget[i]->player);
 			ini.setValue("actionTarget/" + QString::number(i) + "/type", psCurr->psActionTarget[i]->type);
 #ifdef DEBUG
 			ini.setValue("actionTarget/" + QString::number(i) + "/debugfunc", psCurr->actionTargetFunc[i]);
@@ -4262,7 +4264,7 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission)
 	if (psCurr->psTarget != NULL)
 	{
 		ini.setValue("target/id", psCurr->psTarget->id);
-		ini.setValue("target/player", psCurr->psTarget->player);
+		ini.setValue("target/player", (int)psCurr->psTarget->player);
 		ini.setValue("target/type", psCurr->psTarget->type);
 #ifdef DEBUG
 		ini.setValue("target/debugfunc", QString::fromUtf8(psCurr->targetFunc));
@@ -4281,7 +4283,7 @@ static bool writeDroid(WzConfig &ini, DROID *psCurr, bool onMission)
 	if (psCurr->psBaseStruct != NULL)
 	{
 		ini.setValue("baseStruct/id", psCurr->psBaseStruct->id);
-		ini.setValue("baseStruct/player", psCurr->psBaseStruct->player);	// always ours, but for completeness
+		ini.setValue("baseStruct/player", (int)psCurr->psBaseStruct->player);   // always ours, but for completeness
 		ini.setValue("baseStruct/type", psCurr->psBaseStruct->type);		// always a building, but for completeness
 	}
 	if (psCurr->psGroup)
@@ -4870,7 +4872,7 @@ bool writeStructFile(const char *pFileName)
 				if (psCurr->psTarget[i])
 				{
 					ini.setValue("target/" + QString::number(i) + "/id", psCurr->psTarget[i]->id);
-					ini.setValue("target/" + QString::number(i) + "/player", psCurr->psTarget[i]->player);
+					ini.setValue("target/" + QString::number(i) + "/player", (int)psCurr->psTarget[i]->player);
 					ini.setValue("target/" + QString::number(i) + "/type", psCurr->psTarget[i]->type);
 #ifdef DEBUG
 					ini.setValue("target/" + QString::number(i) + "/debugfunc", QString::fromUtf8(psCurr->targetFunc[i]));
@@ -4906,7 +4908,7 @@ bool writeStructFile(const char *pFileName)
 					if (psFactory->psCommander)
 					{
 						ini.setValue("Factory/commander/id", psFactory->psCommander->id);
-						ini.setValue("Factory/commander/player", psFactory->psCommander->player);
+						ini.setValue("Factory/commander/player", (int)psFactory->psCommander->player);
 					}
 					ini.setValue("Factory/secondaryOrder", psFactory->secondaryOrder);
 					ProductionRun &productionRun = asProductionRun[psFactory->psAssemblyPoint->factoryType][psFactory->psAssemblyPoint->factoryInc];
@@ -4942,7 +4944,7 @@ bool writeStructFile(const char *pFileName)
 					if (psRepair->psObj)
 					{
 						ini.setValue("Repair/target/id", psRepair->psObj->id);
-						ini.setValue("Repair/target/player", psRepair->psObj->player);
+						ini.setValue("Repair/target/player", (int)psRepair->psObj->player);
 						ini.setValue("Repair/target/type", psRepair->psObj->type);
 					}
 					FLAG_POSITION *psFlag = psRepair->psDeliveryPoint;
@@ -4961,7 +4963,7 @@ bool writeStructFile(const char *pFileName)
 					if (psReArmPad->psObj)
 					{
 						ini.setValue("Rearm/target/id", psReArmPad->psObj->id);
-						ini.setValue("Rearm/target/player", psReArmPad->psObj->player);
+						ini.setValue("Rearm/target/player", (int)psReArmPad->psObj->player);
 						ini.setValue("Rearm/target/type", psReArmPad->psObj->type);
 					}
 				}
@@ -5970,7 +5972,7 @@ static bool writeMessageFile(const char *pFileName)
 					// message has object so store Object Id
 					BASE_OBJECT *psObj = (BASE_OBJECT*)psMessage->pViewData;
 					ini.setValue("obj/id", psObj->id);
-					ini.setValue("obj/player", psObj->player);
+					ini.setValue("obj/player", (int)psObj->player);
 					ini.setValue("obj/type", psObj->type);
 				}
 			}

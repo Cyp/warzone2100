@@ -712,7 +712,7 @@ void _syncDebugDroid(const char *function, DROID const *psDroid, char ch)
 	_syncDebug(function, "%c droid%d = p%d;pos(%d.%d,%d.%d,%d),rot(%d,%d,%d),ord%d(%d,%d)^%d,act%d%s,so%X,bp%d,sMove(st%d,spd%d,mdir%d,path%d/%d,src(%d,%d),tar(%d,%d),dst(%d,%d),bump(%d,%d,%d,%d,(%d,%d),%d)),exp%u, power = %"PRId64"", ch,
 	          psDroid->id,
 
-	          psDroid->player,
+	          (int)psDroid->player,
 	          psDroid->pos.x, psDroid->sMove.eBitX, psDroid->pos.y, psDroid->sMove.eBitY, psDroid->pos.z,
 	          psDroid->rot.direction, psDroid->rot.pitch, psDroid->rot.roll,
 	          psDroid->order, psDroid->orderX, psDroid->orderY, psDroid->listSize,
@@ -1754,7 +1754,7 @@ bool loadDroidWeapons(const char *pWeaponData, UDWORD bufferSize)
 		DROID_TEMPLATE *pTemplate;
 		std::string templateName = line.s(0);
 
-		for (int player = 0; player < MAX_PLAYERS + 2; ++player)
+		for (PlayerIndex player(0); player < MAX_PLAYERS + 2; ++player)
 		{
 			if (player < MAX_PLAYERS)  // a player
 			{
@@ -2317,7 +2317,7 @@ DROID *reallyBuildDroid(DROID_TEMPLATE *pTemplate, Position pos, UDWORD player, 
 	return psDroid;
 }
 
-DROID *buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, UDWORD player, bool onMission, const INITIAL_DROID_ORDERS *initialOrders)
+DROID *buildDroid(DROID_TEMPLATE *pTemplate, UDWORD x, UDWORD y, PlayerIndex player, bool onMission, const INITIAL_DROID_ORDERS *initialOrders)
 {
 	// ajl. droid will be created, so inform others
 	if (bMultiMessages)
@@ -2912,7 +2912,7 @@ DROID_TEMPLATE *GetAIDroidTemplate(const char *aName)
  * \pre pName has to be the unique, untranslated name!
  * \pre player \< MAX_PLAYERS
  */
-DROID_TEMPLATE * getTemplateFromUniqueName(const char *pName, unsigned int player)
+DROID_TEMPLATE * getTemplateFromUniqueName(const char *pName, PlayerIndex player)
 {
 	DROID_TEMPLATE *psCurr;
 	DROID_TEMPLATE *list = apsStaticTemplates;	// assume AI
@@ -3999,7 +3999,7 @@ bool standardSensorDroid(DROID *psDroid)
 // ////////////////////////////////////////////////////////////////////////////
 // give a droid from one player to another - used in Electronic Warfare and multiplayer
 //returns the droid created - for single player
-DROID * giftSingleDroid(DROID *psD, UDWORD to)
+DROID *giftSingleDroid(DROID *psD, PlayerIndex to)
 {
 	DROID_TEMPLATE	sTemplate;
 	DROID		*psNewDroid, *psCurr;

@@ -121,7 +121,7 @@ extern void setGameTime(uint32_t newGameTime)
 {
 	// Setting game time.
 	gameTime = newGameTime;
-	setPlayerGameTime(NET_ALL_PLAYERS, newGameTime);
+	setPlayerGameTime(ANYPLAYER, newGameTime);
 	deltaGameTime = 0;
 
 	// Setting graphics time to game time.
@@ -184,10 +184,8 @@ void gameTimeUpdate()
 			updateWantedTime = currTime;  // This is the time that we wanted to tick.
 		}
 
-		if (scaledCurrTime >= gameTime && !checkPlayerGameTime(NET_ALL_PLAYERS))
+		if (scaledCurrTime >= gameTime && !checkPlayerGameTime(ANYPLAYER))
 		{
-			unsigned player;
-
 			// Pause time, since we are waiting GAME_GAME_TIME from other players.
 			scaledCurrTime = graphicsTime;
 			baseTime = currTime;
@@ -196,7 +194,7 @@ void gameTimeUpdate()
 			debug(LOG_SYNC, "Waiting for other players. gameTime = %u, player times are {%s}", gameTime, listToString("%u", ", ", gameQueueTime, gameQueueTime + game.maxPlayers).c_str());
 			mayUpdate = false;
 
-			for (player = 0; player < game.maxPlayers; ++player)
+			for (PlayerIndex player(0); player < game.maxPlayers; ++player)
 			{
 				if (!checkPlayerGameTime(player))
 				{
@@ -391,14 +389,13 @@ static void updateLatency()
 
 void sendPlayerGameTime()
 {
-	unsigned player;
 	uint32_t latencyTicks = discreteChosenLatency / GAME_TICKS_PER_UPDATE;
 	uint32_t checkTime = gameTime;
 	uint32_t checkCrc = nextDebugSync();
 
-	for (player = 0; player < game.maxPlayers; ++player)
+	for (PlayerIndex player(0); player < game.maxPlayers; ++player)
 	{
-		if (!myResponsibility(player) && whosResponsible(player) != realSelectedPlayer)
+		if (!myResponsibility(player) && whosResponsible(player) != selectedClient)
 		{
 			continue;
 		}
@@ -434,28 +431,28 @@ void recvPlayerGameTime(NETQUEUE queue)
 		crcError = true;
 		if (NetPlay.players[queue.index].allocated)
 		{
-			NETsetPlayerConnectionStatus(CONNECTIONSTATUS_DESYNC, queue.index);
+			NETsetPlayerConnectionStatus(CONNECTIONSTATUS_DESYNC, PlayerIndex(queue.index));
 		}
 	}
 
-	if (updateReadyTime == 0 && checkPlayerGameTime(NET_ALL_PLAYERS))
+	if (updateReadyTime == 0 && checkPlayerGameTime(ANYPLAYER))
 	{
 		updateReadyTime = wzGetTicks();  // This is the time we were able to tick.
 	}
 }
 
-bool checkPlayerGameTime(unsigned player)
+bool checkPlayerGameTime(PlayerIndex player)
 {
-	unsigned begin = player, end = player + 1;
-	if (player == NET_ALL_PLAYERS)
+	PlayerIndex begin(player), end(player + 1);
+	if (player == ANYPLAYER)
 	{
-		begin = 0;
-		end = game.maxPlayers;
+		begin = PlayerIndex(0);
+		end = PlayerIndex(game.maxPlayers);
 	}
 
 	for (player = begin; player < end; ++player)
 	{
-		if (gameTime > gameQueueTime[player] && !NetPlay.players[player].kick)  // .kick: Don't wait for dropped players.
+		if (gameTime > gameQueueTime[player] && !NetPlay.players[clientOf(player)].kick)  // .kick: Don't wait for dropped players.
 		{
 			return false;  // Still waiting for this player.
 		}
@@ -464,11 +461,11 @@ bool checkPlayerGameTime(unsigned player)
 	return true;  // Have GAME_GAME_TIME from all players.
 }
 
-void setPlayerGameTime(unsigned player, uint32_t time)
+void setPlayerGameTime(PlayerIndex player, uint32_t time)
 {
-	if (player == NET_ALL_PLAYERS)
+	if (player == ANYPLAYER)
 	{
-		for (player = 0; player < game.maxPlayers; ++player)
+		for (player = PlayerIndex(0); player < PlayerIndex(game.maxPlayers); ++player)
 		{
 			gameQueueTime[player] = time;
 		}

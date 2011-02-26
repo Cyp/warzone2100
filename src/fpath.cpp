@@ -352,16 +352,16 @@ void fpathRemoveDroidData(int id)
 
 
 static FPATH_RETVAL fpathRoute(MOVE_CONTROL *psMove, int id, int startX, int startY, int tX, int tY, PROPULSION_TYPE propulsionType, 
-                               DROID_TYPE droidType, FPATH_MOVETYPE moveType, int owner, bool acceptNearest)
+                               DROID_TYPE droidType, FPATH_MOVETYPE moveType, PlayerIndex owner, bool acceptNearest)
 {
-	objTrace(id, "called(*,id=%d,sx=%d,sy=%d,ex=%d,ey=%d,prop=%d,type=%d,move=%d,owner=%d)", id, startX, startY, tX, tY, (int)propulsionType, (int)droidType, (int)moveType, owner);
+	objTrace(id, "called(*,id=%d,sx=%d,sy=%d,ex=%d,ey=%d,prop=%d,type=%d,move=%d,owner=%d)", id, startX, startY, tX, tY, (int)propulsionType, (int)droidType, (int)moveType, (int)owner);
 
 	// don't have to do anything if already there
 	if (startX == tX && startY == tY)
 	{
 		// return failed to stop them moving anywhere
 		objTrace(id, "Tried to move nowhere");
-		syncDebug("fpathRoute(..., %d, %d, %d, %d, %d, %d, %d, %d, %d) = FPR_FAILED", id, startX, startY, tX, tY, propulsionType, droidType, moveType, owner);
+		syncDebug("fpathRoute(..., %d, %d, %d, %d, %d, %d, %d, %d, %d) = FPR_FAILED", id, startX, startY, tX, tY, propulsionType, droidType, moveType, (int)owner);
 		return FPR_FAILED;
 	}
 
@@ -397,7 +397,7 @@ static FPATH_RETVAL fpathRoute(MOVE_CONTROL *psMove, int id, int startX, int sta
 			wzMutexUnlock(fpathMutex);
 
 			objTrace(id, "Got a path to (%d, %d)! Length=%d Retval=%d", psMove->destination.x, psMove->destination.y, psMove->numPoints, (int)retval);
-			syncDebug("fpathRoute(..., %d, %d, %d, %d, %d, %d, %d, %d, %d) = %d, path[%d] = %08X->(%d, %d)", id, startX, startY, tX, tY, propulsionType, droidType, moveType, owner, retval, psMove->numPoints, ~crcSumVector2i(0, psMove->asPath, psMove->numPoints), psMove->destination.x, psMove->destination.y);
+			syncDebug("fpathRoute(..., %d, %d, %d, %d, %d, %d, %d, %d, %d) = %d, path[%d] = %08X->(%d, %d)", id, startX, startY, tX, tY, propulsionType, droidType, moveType, (int)owner, retval, psMove->numPoints, ~crcSumVector2i(0, psMove->asPath, psMove->numPoints), psMove->destination.x, psMove->destination.y);
 
 			return retval;
 		}
@@ -441,7 +441,7 @@ static FPATH_RETVAL fpathRoute(MOVE_CONTROL *psMove, int id, int startX, int sta
 	wzMutexUnlock(fpathMutex);
 
 	objTrace(id, "Queued up a path-finding request to (%d, %d), at least %d items earlier in queue", tX, tY, isFirstJob);
-	syncDebug("fpathRoute(..., %d, %d, %d, %d, %d, %d, %d, %d, %d) = FPR_WAIT", id, startX, startY, tX, tY, propulsionType, droidType, moveType, owner);
+	syncDebug("fpathRoute(..., %d, %d, %d, %d, %d, %d, %d, %d, %d) = FPR_WAIT", id, startX, startY, tX, tY, propulsionType, droidType, moveType, (int)owner);
 	return FPR_WAIT;	// wait while polling result queue
 }
 
@@ -587,7 +587,7 @@ static int fpathResultQueueLength(void)
 // Only used by fpathTest.
 static FPATH_RETVAL fpathSimpleRoute(MOVE_CONTROL *psMove, int id, int startX, int startY, int tX, int tY)
 {
-	return fpathRoute(psMove, id, startX, startY, tX, tY, PROPULSION_TYPE_WHEELED, DROID_WEAPON, FMT_BLOCK, 0, true);
+	return fpathRoute(psMove, id, startX, startY, tX, tY, PROPULSION_TYPE_WHEELED, DROID_WEAPON, FMT_BLOCK, PlayerIndex(0), true);
 }
 
 void fpathTest(int x, int y, int x2, int y2)

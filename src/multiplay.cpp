@@ -80,8 +80,8 @@ UBYTE						bDisplayMultiJoiningStatus;
 MULTIPLAYERGAME				game;									//info to describe game.
 MULTIPLAYERINGAME			ingame;
 
-char						beaconReceiveMsg[MAX_PLAYERS][MAX_CONSOLE_STRING_LENGTH];	//beacon msg for each player
-char                                            playerName[MAX_CONNECTED_PLAYERS][MAX_STR_LENGTH];  //Array to store all player names (humans and AIs)
+char                    beaconReceiveMsg[MAX_CLIENTS][MAX_CONSOLE_STRING_LENGTH];  //beacon msg for each player
+char                    playerName[MAX_CLIENTS][MAX_STR_LENGTH];                   //Array to store all player names (humans and AIs)
 bool						bPlayerReadyGUI[MAX_PLAYERS] = {false};
 
 /////////////////////////////////////
@@ -424,55 +424,66 @@ BASE_OBJECT *IdToPointer(UDWORD id,UDWORD player)
 
 // ////////////////////////////////////////////////////////////////////////////
 // return a players name.
-const char* getPlayerName(int player)
+const char* getPlayerName(PlayerIndex player)
 {
-	ASSERT_OR_RETURN(NULL, player < MAX_CONNECTED_PLAYERS, "Wrong player index: %u", player);
+	return getPlayerName(clientOf(player));
+}
+
+const char* getPlayerName(ClientIndex client)
+{
+	ASSERT_OR_RETURN(NULL, client < MAX_CONNECTED_PLAYERS, "Wrong player index: %u", (int)client);
 
 	if (game.type != CAMPAIGN)
 	{
-		if (strcmp(playerName[player], "") != 0)
+		if (strcmp(playerName[client], "") != 0)
 		{
-			return (char*)&playerName[player];
+			return (char*)&playerName[client];
 		}
 	}
 
-	if (strlen(NetPlay.players[player].name) == 0)
+	if (strlen(NetPlay.players[client].name) == 0)
 	{
 		// make up a name for this player.
-		return getPlayerColourName(player);
+		return getPlayerColourName(client);
 	}
 
-	return NetPlay.players[player].name;
+	return NetPlay.players[client].name;
 }
 
-bool setPlayerName(int player, const char *sName)
+bool setPlayerName(ClientIndex player, const char *sName)
 {
-	ASSERT_OR_RETURN(false, player < MAX_CONNECTED_PLAYERS && player >= 0, "Player index (%u) out of range", player);
+	ASSERT_OR_RETURN(false, player < MAX_CLIENTS && player >= 0, "Player index (%u) out of range", player);
 	sstrcpy(playerName[player], sName);
 	return true;
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // to determine human/computer players and responsibilities of each..
-bool isHumanPlayer(int player)
+bool isHumanPlayer(PlayerIndex player)
 {
 	if (player >= MAX_PLAYERS || player < 0)
 	{
 		return false;	// obvious, really
 	}
-	return NetPlay.players[player].allocated;
+	return NetPlay.players[clientOf(player)].allocated;
+}
+
+bool isHumanClient(ClientIndex client)
+{
+	return NetPlay.players[client].allocated;
+}
+
+bool isObserver(ClientIndex client)
+{
+	return playerOf(client) == PLAYER_OBSERVER;
 }
 
 // returns player responsible for 'player'
-int whosResponsible(int player)
+ClientIndex whosResponsible(PlayerIndex player)
 {
 	if (isHumanPlayer(player))
 	{
-		return player;			// Responsible for him or her self
-	}
-	else if (player == selectedPlayer)
-	{
-		return player;			// We are responsibly for ourselves
+		return clientOf(player);  // Responsible for him or her self
 	}
 	else
 	{
@@ -480,14 +491,23 @@ int whosResponsible(int player)
 	}
 }
 
-//returns true if selected player is responsible for 'player'
-bool myResponsibility(int player)
+ClientIndex whosResponsible(ClientIndex client)
 {
-	return whosResponsible(player) == selectedPlayer;
+	if (isObserver(client))
+	{
+		return client;
+	}
+	return whosResponsible(playerOf(client));
+}
+
+//returns true if selected player is responsible for 'player'
+bool myResponsibility(PlayerIndex player)
+{
+	return whosResponsible(player) == selectedClient;
 }
 
 //returns true if 'player' is responsible for 'playerinquestion'
-bool responsibleFor(int player, int playerinquestion)
+bool responsibleFor(ClientIndex player, PlayerIndex playerinquestion)
 {
 	return whosResponsible(playerinquestion) == player;
 }
@@ -854,7 +874,7 @@ static bool recvResearch(NETQUEUE queue)
 // ////////////////////////////////////////////////////////////////////////////
 // New research stuff, so you can see what others are up to!
 // inform others that I'm researching this.
-bool sendResearchStatus(STRUCTURE *psBuilding, uint32_t index, uint8_t player, bool bStart)
+bool sendResearchStatus(STRUCTURE *psBuilding, uint32_t index, PlayerIndex player, bool bStart)
 {
 	if (!myResponsibility(player) || gameTime < 5)
 	{
@@ -862,7 +882,7 @@ bool sendResearchStatus(STRUCTURE *psBuilding, uint32_t index, uint8_t player, b
 	}
 
 	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_RESEARCHSTATUS);
-		NETuint8_t(&player);
+		NETuint32_t(&player);
 		NETbool(&bStart);
 
 		// If we know the building researching it then send its ID
@@ -892,12 +912,12 @@ bool recvResearchStatus(NETQUEUE queue)
 	PLAYER_RESEARCH		*pPlayerRes;
 	RESEARCH_FACILITY	*psResFacilty;
 	RESEARCH			*pResearch;
-	uint8_t				player;
+	PlayerIndex             player;
 	bool				bStart;
 	uint32_t			index, structRef;
 
 	NETbeginDecode(queue, GAME_RESEARCHSTATUS);
-		NETuint8_t(&player);
+		NETuint32_t(&player);
 		NETbool(&bStart);
 		NETuint32_t(&structRef);
 		NETuint32_t(&index);
@@ -1145,12 +1165,10 @@ void printConsoleNameChange(const char *oldName, const char *newName)
 
 
 //AI multiplayer message, send from a certain player index to another player index
-bool sendAIMessage(char *pStr, UDWORD player, UDWORD to)
+bool sendAIMessage(char *pStr, ClientIndex player, ClientIndex to)
 {
-	UDWORD	sendPlayer;
-
 	//check if this is one of the local players, don't need net send then
-	if (to == selectedPlayer || myResponsibility(to))	//(the only) human on this machine or AI on this machine
+	if (to == selectedClient || myResponsibility(to))  //(the only) human on this machine or AI on this machine
 	{
 		//Just show "him" the message
 		displayAIMessage(pStr, player, to);
@@ -1172,22 +1190,22 @@ bool sendAIMessage(char *pStr, UDWORD player, UDWORD to)
 		}
 
 		//find machine that is hosting this human or AI
-		sendPlayer = whosResponsible(to);
+		ClientIndex sendClient = whosResponsible(to);
 
-		if (sendPlayer >= MAX_PLAYERS)
+		if (sendClient >= MAX_CLIENTS)
 		{
-			debug(LOG_ERROR, "sendAIMessage() - sendPlayer >= MAX_PLAYERS");
+			debug(LOG_ERROR, "sendAIMessage() - sendClient >= MAX_CLIENTS");
 			return false;
 		}
 
-		if (!isHumanPlayer(sendPlayer))		//NETsend can't send to non-humans
+		if (!isHumanPlayer(sendClient))		//NETsend can't send to non-humans
 		{
 			debug(LOG_ERROR, "sendAIMessage() - player is not human.");
 			return false;
 		}
 
 		//send to the player who is hosting 'to' player (might be himself if human and not AI)
-		NETbeginEncode(NETnetQueue(sendPlayer), NET_AITEXTMSG);
+		NETbeginEncode(NETnetQueue(sendClient), NET_AITEXTMSG);
 			NETuint32_t(&player);			//save the actual sender
 			//save the actual player that is to get this msg on the source machine (source can host many AIs)
 			NETuint32_t(&to);				//save the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
@@ -1201,27 +1219,24 @@ bool sendAIMessage(char *pStr, UDWORD player, UDWORD to)
 //
 // At this time, we do NOT support messages for beacons
 //
-bool sendBeacon(int32_t locX, int32_t locY, int32_t forPlayer, int32_t sender, const char* pStr)
+bool sendBeacon(int32_t locX, int32_t locY, ClientIndex forClient, ClientIndex sender, const char* pStr)
 {
-	int sendPlayer;
-	//debug(LOG_WZ, "sendBeacon: '%s'",pStr);
-
 	//find machine that is hosting this human or AI
-	sendPlayer = whosResponsible(forPlayer);
+	ClientIndex sendPlayer = whosResponsible(forClient);
 
-	if(sendPlayer >= MAX_PLAYERS)
+	if(sendPlayer >= MAX_CLIENTS)
 	{
-		debug(LOG_ERROR, "sendAIMessage() - whosResponsible() failed.");
+		debug(LOG_ERROR, "sendBeacon() - whosResponsible() failed.");
 		return false;
 	}
 
 	// I assume this is correct, looks like it sends it to ONLY that person, and the routine
 	// kf_AddHelpBlip() iterates for each player it needs.
 	NETbeginEncode(NETnetQueue(sendPlayer), NET_BEACONMSG);    // send to the player who is hosting 'to' player (might be himself if human and not AI)
-		NETint32_t(&sender);                                // save the actual sender
+		NETuint32_t(&sender);                               // save the actual sender
 
 		// save the actual player that is to get this msg on the source machine (source can host many AIs)
-		NETint32_t(&forPlayer);                             // save the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
+		NETuint32_t(&forClient);                            // save the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
 		NETint32_t(&locX);                                  // save location
 		NETint32_t(&locY);
 
@@ -1232,11 +1247,11 @@ bool sendBeacon(int32_t locX, int32_t locY, int32_t forPlayer, int32_t sender, c
 	return true;
 }
 
-void displayAIMessage(char *pStr, SDWORD from, SDWORD to)
+void displayAIMessage(char *pStr, ClientIndex from, ClientIndex to)
 {
 	char				tmp[255];
 
-	if (isHumanPlayer(to))		//display text only if receiver is the (human) host machine itself
+	if (to == selectedClient)  //display text only if receiver is the (human) host machine itself
 	{
 		strcpy(tmp, getPlayerName(from));
 		strcat(tmp, ": ");											// seperator
@@ -1249,7 +1264,7 @@ void displayAIMessage(char *pStr, SDWORD from, SDWORD to)
 // Write a message to the console.
 bool recvTextMessage(NETQUEUE queue)
 {
-	UDWORD	playerIndex;
+	ClientIndex clientIndex;
 	char	msg[MAX_CONSOLE_STRING_LENGTH];
 	char newmsg[MAX_CONSOLE_STRING_LENGTH];
 
@@ -1258,33 +1273,33 @@ bool recvTextMessage(NETQUEUE queue)
 
 	NETbeginDecode(queue, NET_TEXTMSG);
 		// Who this msg is from
-		NETuint32_t(&playerIndex);
+		NETuint32_t(&clientIndex);
 		// The message to send
 		NETstring(newmsg, MAX_CONSOLE_STRING_LENGTH);
 	NETend();
 
-	if (whosResponsible(playerIndex) != queue.index)
+	if (whosResponsible(clientIndex) != queue.index)
 	{
-		playerIndex = queue.index;  // Fix corrupted playerIndex.
+		clientIndex = ClientIndex(queue.index);  // Fix corrupted playerIndex.
 	}
 
-	if (playerIndex >= MAX_PLAYERS)
+	if (clientIndex >= MAX_CLIENTS)
 	{
 		return false;
 	}
 
-	sstrcpy(msg, NetPlay.players[playerIndex].name);
+	sstrcpy(msg, NetPlay.players[clientIndex].name);
 	// Seperator
 	sstrcat(msg, ": ");
 	// Add message
 	sstrcat(msg, newmsg);
 
-	addConsoleMessage(msg, DEFAULT_JUSTIFY, playerIndex);
+	addConsoleMessage(msg, DEFAULT_JUSTIFY, clientIndex);
 
 	// Multiplayer message callback
 	// Received a console message from a player, save
-	MultiMsgPlayerFrom = playerIndex;
-	MultiMsgPlayerTo = selectedPlayer;
+	MultiMsgPlayerFrom = clientIndex;
+	MultiMsgPlayerTo = selectedClient;
 
 	sstrcpy(MultiplayMsg, newmsg);
 	eventFireCallbackTrigger((TRIGGER_TYPE)CALL_AI_MSG);
@@ -1305,7 +1320,7 @@ bool recvTextMessage(NETQUEUE queue)
 //AI multiplayer message - received message from AI (from scripts)
 bool recvTextMessageAI(NETQUEUE queue)
 {
-	UDWORD	sender, receiver;
+	ClientIndex sender, receiver;
 	char	msg[MAX_CONSOLE_STRING_LENGTH];
 	char	newmsg[MAX_CONSOLE_STRING_LENGTH];
 
@@ -1317,7 +1332,7 @@ bool recvTextMessageAI(NETQUEUE queue)
 
 	if (whosResponsible(sender) != queue.index)
 	{
-		sender = queue.index;  // Fix corrupted sender.
+		sender = ClientIndex(queue.index);  // Fix corrupted sender.
 	}
 
 	//sstrcpy(msg, getPlayerName(sender));  // name
@@ -1509,7 +1524,7 @@ bool recvDestroyFeature(NETQUEUE queue)
 		return false;
 	}
 
-	debug(LOG_FEATURE, "p%d feature id %d destroyed (%s)", pF->player, pF->id, pF->psStats->pName);
+	debug(LOG_FEATURE, "p%d feature id %d destroyed (%s)", (int)pF->player, pF->id, pF->psStats->pName);
 	// Remove the feature locally
 	turnOffMultiMsg(true);
 	removeFeature(pF);
@@ -1898,18 +1913,20 @@ bool msgStackFireTop(void)
 
 static bool recvBeacon(NETQUEUE queue)
 {
-	int32_t sender, receiver,locX, locY;
+	ClientIndex sender, receiver;
+	int32_t locX, locY;
 	char    msg[MAX_CONSOLE_STRING_LENGTH];
 
 	NETbeginDecode(queue, NET_BEACONMSG);
-	    NETint32_t(&sender);            // the actual sender
-	    NETint32_t(&receiver);          // the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
+	    NETuint32_t(&sender);           // the actual sender
+	    NETuint32_t(&receiver);         // the actual receiver (might not be the same as the one we are actually sending to, in case of AIs)
 	    NETint32_t(&locX);
 	    NETint32_t(&locY);
 	    NETstring(msg, sizeof(msg));    // Receive the actual message
 	NETend();
+	ASSERT_OR_RETURN(false, sender < MAX_CLIENTS && receiver < MAX_CLIENTS, "Bad value.");
 
-	debug(LOG_WZ, "Received beacon for player: %d, from: %d",receiver, sender);
+	debug(LOG_WZ, "Received beacon for player: %d, from: %d", (int)receiver, (int)sender);
 
 	sstrcat(msg, NetPlay.players[sender].name);    // name
 	sstrcpy(beaconReceiveMsg[sender], msg);
@@ -1917,7 +1934,12 @@ static bool recvBeacon(NETQUEUE queue)
 	return addBeaconBlip(locX, locY, receiver, sender, beaconReceiveMsg[sender]);
 }
 
-const char* getPlayerColourName(int player)
+const char* getPlayerColourName(PlayerIndex player)
+{
+	return getPlayerColourName(clientOf(player));
+}
+
+const char* getPlayerColourName(ClientIndex client)
 {
 	static const char* playerColors[] =
 	{
@@ -1940,14 +1962,20 @@ const char* getPlayerColourName(int player)
 	};
 	STATIC_ASSERT(MAX_PLAYERS <= ARRAY_SIZE(playerColors));
 
-	ASSERT(player < ARRAY_SIZE(playerColors), "player number (%d) exceeds maximum (%lu)", player, (unsigned long) ARRAY_SIZE(playerColors));
+	ASSERT(client < MAX_CLIENTS, "client number (%d) exceeds maximum (%d)", (int)client, (int)MAX_CLIENTS);
 
-	if (player >= ARRAY_SIZE(playerColors))
+	if (NetPlay.players[client].position == PLAYER_OBSERVER)
 	{
-		return "";
+		return _("Observer");
 	}
 
-	return gettext(playerColors[getPlayerColour(player)]);
+	unsigned colour = NetPlay.players[client].colour;
+	if (colour >= ARRAY_SIZE(playerColors))
+	{
+		return "(invalid colour)";
+	}
+
+	return gettext(playerColors[getPlayerColour(client)]);
 }
 
 /* Reset ready status for all players */

@@ -338,7 +338,7 @@ static SDWORD targetAttackWeight(BASE_OBJECT *psTarget, BASE_OBJECT *psAttacker,
 			damageRatio = 0;
 			debug(LOG_ERROR, "targetAttackWeight: 0HP droid detected!");
 			debug(LOG_ERROR, "  Type: %i Name: \"%s\" Owner: %i \"%s\")",
-				  targetDroid->droidType, targetDroid->aName, targetDroid->player, getPlayerName(targetDroid->player));
+				  targetDroid->droidType, targetDroid->aName, (int)targetDroid->player, getPlayerName(targetDroid->player));
 		}
 		else
 		{

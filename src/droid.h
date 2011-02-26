@@ -347,7 +347,7 @@ extern bool cbSensorDroid(DROID *psDroid);
 extern bool standardSensorDroid(DROID *psDroid);
 
 // give a droid from one player to another - used in Electronic Warfare and multiplayer
-extern DROID * giftSingleDroid(DROID *psD, UDWORD to);
+DROID *giftSingleDroid(DROID *psD, PlayerIndex to);
 /*calculates the electronic resistance of a droid based on its experience level*/
 extern SWORD   droidResistance(DROID *psDroid);
 

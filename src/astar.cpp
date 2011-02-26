@@ -98,7 +98,7 @@ struct PathBlockingType
 	uint32_t gameTime;
 
 	PROPULSION_TYPE propulsion;
-	int owner;
+	PlayerIndex owner;
 	FPATH_MOVETYPE moveType;
 };
 /// Pathfinding blocking map
@@ -559,11 +559,11 @@ void fpathSetBlockingMap(PATHJOB *psJob)
 				checksumDangerMap ^= map[x + y*mapWidth]*(factor = 3*factor + 1);
 			}
 		}
-		syncDebug("blockingMap(%d,%d,%d,%d) = %08X %08X", gameTime, psJob->propulsion, psJob->owner, psJob->moveType, checksumMap, checksumDangerMap);
+		syncDebug("blockingMap(%d,%d,%d,%d) = %08X %08X", gameTime, psJob->propulsion, (int)psJob->owner, psJob->moveType, checksumMap, checksumDangerMap);
 	}
 	else
 	{
-		syncDebug("blockingMap(%d,%d,%d,%d) = cached", gameTime, psJob->propulsion, psJob->owner, psJob->moveType);
+		syncDebug("blockingMap(%d,%d,%d,%d) = cached", gameTime, psJob->propulsion, (int)psJob->owner, psJob->moveType);
 	}
 
 	// i now points to the correct map. Make psJob->blockingMap point to it.

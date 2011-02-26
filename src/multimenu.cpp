@@ -800,7 +800,7 @@ static void displayMultiPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 	char			str[128];
 	UDWORD			x					= xOffset+psWidget->x;
 	UDWORD			y					= yOffset+psWidget->y;
-	UDWORD			player = psWidget->UserData; //get the in game player number.
+	PlayerIndex             player(psWidget->UserData);  //get the in game player number.
 	Position		position;
 	Vector3i 		rotation;
 
@@ -814,7 +814,7 @@ static void displayMultiPlayer(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset,
 
 	if(isHumanPlayer(player) || (game.type == SKIRMISH && player<game.maxPlayers) )
 	{
-		ssprintf(str, "%d: %s", NetPlay.players[player].position, getPlayerName(player));
+		ssprintf(str, "%d: %s", (int)NetPlay.players[player].position, getPlayerName(player));
 		if (isHumanPlayer(player))
 		{
 			SetPlayerTextColor(alliances[selectedPlayer][player], player);
@@ -1348,7 +1348,7 @@ bool intAddMultiMenu(void)
 	}
 
 	// add any players
-	for(i=0;i<MAX_PLAYERS;i++)
+	for (PlayerIndex i(0); i < MAX_PLAYERS; ++i)
 	{
 		if(isHumanPlayer(i) || (game.type == SKIRMISH && i<game.maxPlayers && game.skDiff[i] ) )
 		{
@@ -1483,24 +1483,24 @@ void intProcessMultiMenu(UDWORD id)
 	//radar gifts
 	if(id >=  MULTIMENU_GIFT_RAD && id< MULTIMENU_GIFT_RAD +MAX_PLAYERS)
 	{
-		sendGift(RADAR_GIFT, id - MULTIMENU_GIFT_RAD);
+		sendGift(RADAR_GIFT, PlayerIndex(id - MULTIMENU_GIFT_RAD));
 	}
 
 	// research gift
 	if(id >= MULTIMENU_GIFT_RES && id<MULTIMENU_GIFT_RES  +MAX_PLAYERS)
 	{
-		sendGift(RESEARCH_GIFT, id - MULTIMENU_GIFT_RES);
+		sendGift(RESEARCH_GIFT, PlayerIndex(id - MULTIMENU_GIFT_RES));
 	}
 
 	//droid gift
 	if(id >=  MULTIMENU_GIFT_DRO && id<  MULTIMENU_GIFT_DRO +MAX_PLAYERS)
 	{
-		sendGift(DROID_GIFT, id - MULTIMENU_GIFT_DRO);
+		sendGift(DROID_GIFT, PlayerIndex(id - MULTIMENU_GIFT_DRO));
 	}
 
 	//power gift
 	if(id >=  MULTIMENU_GIFT_POW && id<  MULTIMENU_GIFT_POW +MAX_PLAYERS)
 	{
-		sendGift(POWER_GIFT, id - MULTIMENU_GIFT_POW);
+		sendGift(POWER_GIFT, PlayerIndex(id - MULTIMENU_GIFT_POW));
 	}
 }

@@ -121,7 +121,7 @@ extern UBYTE				bDisplayMultiJoiningStatus;	// draw load progress?
 
 #define MAX_BYTESPERSEC			14336
 
-#define ANYPLAYER				99
+#define ANYPLAYER                       PlayerIndex(99)
 
 #define CAMPAIGN				12
 #define	SKIRMISH				14
@@ -158,17 +158,22 @@ extern WZ_DECL_WARN_UNUSED_RESULT DROID			*IdToDroid(UDWORD id, UDWORD player);
 extern WZ_DECL_WARN_UNUSED_RESULT FEATURE		*IdToFeature(UDWORD id,UDWORD player);
 extern WZ_DECL_WARN_UNUSED_RESULT DROID_TEMPLATE	*IdToTemplate(UDWORD tempId,UDWORD player);
 
-extern const char* getPlayerName(int player);
-extern bool setPlayerName(int player, const char *sName);
-extern const char* getPlayerColourName(int player);
-extern bool isHumanPlayer(int player);				//to tell if the player is a computer or not.
+const char* getPlayerName(PlayerIndex client);
+const char* getPlayerName(ClientIndex client);
+bool setPlayerName(ClientIndex client, const char *sName);
+const char* getPlayerColourName(PlayerIndex player);
+const char* getPlayerColourName(ClientIndex player);
+bool isHumanPlayer(PlayerIndex player);  //to tell if the player is a computer or not.
+bool isHumanClient(ClientIndex client);  //to tell if the client is a computer or not.
+bool isObserver(ClientIndex client);
 extern bool myResponsibility(int player);
 extern bool responsibleFor(int player, int playerinquestion);
-extern int whosResponsible(int player);
+ClientIndex whosResponsible(PlayerIndex player);
+ClientIndex whosResponsible(ClientIndex client);
 int scavengerSlot();    // Returns the player number that scavengers would have if they were enabled.
 int scavengerPlayer();  // Returns the player number that the scavengers have, or -1 if disabled.
 extern Vector3i cameraToHome		(UDWORD player,bool scroll);
-extern char playerName[MAX_CONNECTED_PLAYERS][MAX_STR_LENGTH];  //Array to store all player names (humans and AIs)
+extern char playerName[MAX_CLIENTS][MAX_STR_LENGTH];  //Array to store all player names (humans and AIs)
 
 extern bool	multiPlayerLoop		(void);							// for loop.c
 
@@ -196,7 +201,7 @@ extern bool sendLasSat			(UBYTE player, STRUCTURE *psStruct, BASE_OBJECT *psObj)
 void sendStructureInfo                  (STRUCTURE *psStruct, STRUCTURE_INFO structureInfo, DROID_TEMPLATE *psTempl);
 
 // droids . multibot
-extern bool SendDroid                   (const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, uint8_t player, uint32_t id, const INITIAL_DROID_ORDERS *initialOrders);
+bool SendDroid(const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, PlayerIndex player, uint32_t id, const INITIAL_DROID_ORDERS *initialOrders);
 extern bool SendDestroyDroid	(const DROID* psDroid);
 extern bool SendDemolishFinished(STRUCTURE *psS,DROID *psD);
 void sendQueuedDroidInfo(void);  ///< Actually sends the droid orders which were queued by SendDroidInfo.
@@ -229,9 +234,9 @@ extern bool sendPing			(void);							// allow game to request pings.
 
 extern bool ForceDroidSync(const DROID *droidToSend);
 // multijoin
-extern bool sendResearchStatus  (STRUCTURE *psBuilding, UDWORD index, UBYTE player, bool bStart);
+bool sendResearchStatus(STRUCTURE *psBuilding, UDWORD index, PlayerIndex player, bool bStart);
 
-extern void displayAIMessage	(char *pStr, SDWORD from, SDWORD to); //make AI process a message
+void displayAIMessage(char *pStr, ClientIndex from, ClientIndex to);  //make AI process a message
 
 
 /* for multiplayer message stack */
@@ -245,7 +250,7 @@ extern	SDWORD	msgStackGetCount(void);
 extern	void	msgStackReset(void);
 extern bool msgStackGetDroid(DROID **ppsDroid);
 
-extern bool sendBeacon(int32_t locX, int32_t locY, int32_t forPlayer, int32_t sender, const char* pStr);
+bool sendBeacon(int32_t locX, int32_t locY, ClientIndex forClient, ClientIndex sender, const char* pStr);
 extern bool msgStackFireTop(void);
 
 extern	bool multiplayPlayersReady	(bool bNotifyStatus);

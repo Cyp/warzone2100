@@ -639,7 +639,7 @@ bool multiGameShutdown(void)
 	NetPlay.isHost					= false;
 	bMultiPlayer					= false;	// Back to single player mode
 	bMultiMessages					= false;
-	selectedPlayer					= 0;		// Back to use player 0 (single player friendly)
+	selectedPlayer = PlayerIndex(0);  // Back to use player 0 (single player friendly)
 
 	return true;
 }

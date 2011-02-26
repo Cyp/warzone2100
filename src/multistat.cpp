@@ -36,11 +36,11 @@
 // ////////////////////////////////////////////////////////////////////////////
 // STATS STUFF
 // ////////////////////////////////////////////////////////////////////////////
-static PLAYERSTATS playerStats[MAX_PLAYERS];
+static PLAYERSTATS playerStats[MAX_CLIENTS];
 
 // ////////////////////////////////////////////////////////////////////////////
 // Get Player's stats
-PLAYERSTATS getMultiStats(UDWORD player)
+PLAYERSTATS getMultiStats(ClientIndex player)
 {
 	return playerStats[player];
 }
@@ -48,7 +48,7 @@ PLAYERSTATS getMultiStats(UDWORD player)
 // ////////////////////////////////////////////////////////////////////////////
 // Set Player's stats
 // send stats to all players when bLocal is false
-bool setMultiStats(uint32_t playerIndex, PLAYERSTATS plStats, bool bLocal)
+bool setMultiStats(ClientIndex playerIndex, PLAYERSTATS plStats, bool bLocal)
 {
 	if (playerIndex >= MAX_PLAYERS)
 	{
@@ -81,14 +81,14 @@ bool setMultiStats(uint32_t playerIndex, PLAYERSTATS plStats, bool bLocal)
 
 void recvMultiStats(NETQUEUE queue)
 {
-	uint32_t playerIndex;
+	ClientIndex playerIndex;
 
 	NETbeginDecode(queue, NET_PLAYER_STATS);
 		// Retrieve the ID number of the player for which we need to
 		// update the stats
-		NETuint32_t(&playerIndex);
+		NETuint32_t(&playerIndex.val);
 
-		if (playerIndex >= MAX_PLAYERS)
+		if (playerIndex >= MAX_CLIENTS)
 		{
 			return;
 		}

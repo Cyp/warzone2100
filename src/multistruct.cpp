@@ -238,14 +238,14 @@ bool recvDestroyStructure(NETQUEUE queue)
 // ////////////////////////////////////////////////////////////////////////////
 //lassat is firing
 
-bool sendLasSat(UBYTE player, STRUCTURE *psStruct, BASE_OBJECT *psObj)
+bool sendLasSat(PlayerIndex player, STRUCTURE *psStruct, BASE_OBJECT *psObj)
 {
 	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_LASSAT);
 
-		NETuint8_t(&player);
+		NETuint32_t(&player);
 		NETuint32_t(&psStruct->id);
 		NETuint32_t(&psObj->id);	// Target
-		NETuint8_t(&psObj->player);	// Target player
+		NETuint32_t(&psObj->player);	// Target player
 
 	return NETend();
 }
@@ -254,15 +254,15 @@ bool sendLasSat(UBYTE player, STRUCTURE *psStruct, BASE_OBJECT *psObj)
 bool recvLasSat(NETQUEUE queue)
 {
 	BASE_OBJECT	*psObj;
-	UBYTE		player,targetplayer;
+	PlayerIndex     player, targetplayer;
 	STRUCTURE	*psStruct;
 	uint32_t	id,targetid;
 
 	NETbeginDecode(queue, GAME_LASSAT);
-		NETuint8_t(&player);
+		NETuint32_t(&player);
 		NETuint32_t(&id);
 		NETuint32_t(&targetid);
-		NETuint8_t(&targetplayer);
+		NETuint32_t(&targetplayer);
 	NETend();
 
 	psStruct = IdToStruct (id, player);

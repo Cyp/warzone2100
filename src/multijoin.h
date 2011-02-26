@@ -28,9 +28,9 @@
 
 extern bool intDisplayMultiJoiningStatus(UBYTE joinCount);
 void recvPlayerLeft(NETQUEUE queue);
-extern bool MultiPlayerLeave			(UDWORD playerIndex);						// A player has left the game.
-extern bool MultiPlayerJoin				(UDWORD playerIndex);						// A Player has joined the game.
-extern void setupNewPlayer				(UDWORD player);		// stuff to do when player joins.
+bool MultiPlayerLeave(ClientIndex playerIndex);  // A player has left the game.
+bool MultiPlayerJoin(ClientIndex playerIndex);   // A Player has joined the game.
+void setupNewPlayer(PlayerIndex player);                // stuff to do when player joins.
 extern void clearPlayer					(UDWORD player, bool quietly);// wipe a player off the face of the earth.
 //extern bool ProcessDroidOrders			(void);
 //extern UDWORD							arenaPlayersReceived;

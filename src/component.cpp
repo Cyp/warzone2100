@@ -52,15 +52,19 @@ static bool		leftFirst;
 
 // Colour Lookups
 // use col = MAX_PLAYERS for anycolour (see multiint.c)
-bool setPlayerColour(UDWORD player, UDWORD col)
+bool setPlayerColour(ClientIndex client, unsigned col)
 {
-	ASSERT(player < MAX_PLAYERS && col < MAX_PLAYERS, "Bad colour setting");
-	NetPlay.players[player].colour = col;
+	ASSERT(client < MAX_CLIENTS && col < MAX_PLAYERS, "Bad colour setting");
+	NetPlay.players[client].colour = col;
 	return true;
 }
 
-UBYTE getPlayerColour(UDWORD pl)
+int getPlayerColour(ClientIndex pl)
 {
+	if (playerOf(pl) == PLAYER_OBSERVER)
+	{
+		return 0x00FFFFFF;
+	}
 	return NetPlay.players[pl].colour;
 }
 

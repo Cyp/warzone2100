@@ -51,10 +51,10 @@ struct NETQUEUE
 	uint8_t queueType;
 };
 
-NETQUEUE NETnetTmpQueue(unsigned tmpPlayer);  ///< One of the temp queues from before a client has joined the game. (See comments on tmpQueues in nettypes.cpp.)
-NETQUEUE NETnetQueue(unsigned player);        ///< The queue pair used for sending and receiving data directly from another client. (See comments on netQueues in nettypes.cpp.)
-NETQUEUE NETgameQueue(unsigned player);       ///< The game action queue. (See comments on gameQueues in nettypes.cpp.)
-NETQUEUE NETbroadcastQueue(void);             ///< The queue for sending data directly to the netQueues of all clients, not just a specific one. (See comments on broadcastQueue in nettypes.cpp.)
+NETQUEUE NETnetTmpQueue(TmpClientIndex tmpPlayer);  ///< One of the temp queues from before a client has joined the game. (See comments on tmpQueues in nettypes.cpp.)
+NETQUEUE NETnetQueue(ClientIndex player);           ///< The queue pair used for sending and receiving data directly from another client. (See comments on netQueues in nettypes.cpp.)
+NETQUEUE NETgameQueue(PlayerIndex player);          ///< The game action queue. (See comments on gameQueues in nettypes.cpp.)
+NETQUEUE NETbroadcastQueue(void);                   ///< The queue for sending data directly to the netQueues of all clients, not just a specific one. (See comments on broadcastQueue in nettypes.cpp.)
 
 void NETinsertRawData(NETQUEUE queue, uint8_t *data, size_t dataLen);  ///< Dump raw data from sockets and raw data sent via host here.
 void NETinsertMessageFromNet(NETQUEUE queue, NetMessage const *message);     ///< Dump whole NetMessages into the queue.
@@ -85,6 +85,9 @@ void NETbool(bool *bp);
 void NETstring(char *str, uint16_t maxlen);
 void NETstring(char const *str, uint16_t maxlen);  ///< Encode-only version of NETstring.
 void NETbin(uint8_t *str, uint32_t len);
+
+static inline void NETuint32_t(PlayerIndex *ip) { NETuint32_t(&ip->val); }
+static inline void NETuint32_t(ClientIndex *ip) { NETuint32_t(&ip->val); }
 
 PACKETDIR NETgetPacketDir(void);
 

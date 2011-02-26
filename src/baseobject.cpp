@@ -79,7 +79,7 @@ SIMPLE_OBJECT::~SIMPLE_OBJECT()
 {
 #ifdef DEBUG
 	const_cast<OBJECT_TYPE &>(type) = (OBJECT_TYPE)(type + 1000000000);  // Hopefully this will trigger an assert              if someone uses the freed object.
-	player += 100;                                                       // Hopefully this will trigger an assert and/or crash if someone uses the freed object.
+	player = PlayerIndex(player + 100);                                  // Hopefully this will trigger an assert and/or crash if someone uses the freed object.
 #endif //DEBUG
 }
 
@@ -148,7 +148,7 @@ void _syncDebugObject(const char *function, SIMPLE_OBJECT const *psObject, char 
 		case OBJ_STRUCTURE:  _syncDebugStructure (function, (const STRUCTURE *) psObject, ch); break;
 		case OBJ_FEATURE:    _syncDebugFeature   (function, (const FEATURE *)   psObject, ch); break;
 		case OBJ_PROJECTILE: _syncDebugProjectile(function, (const PROJECTILE *)psObject, ch); break;
-		default:             _syncDebug          (function, "%c unidentified_object%d = p%d;objectType%d", ch, psObject->id, psObject->player, psObject->type);
+		default:             _syncDebug          (function, "%c unidentified_object%d = p%d;objectType%d", ch, psObject->id, (int)psObject->player, psObject->type);
 			ASSERT_HELPER(!"invalid object type", "_syncDebugObject", function, "syncDebug: Invalid object type (type num %u)", (unsigned int)psObject->type);
 			break;
 	}

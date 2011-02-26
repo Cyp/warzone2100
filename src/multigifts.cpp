@@ -58,23 +58,24 @@
 ///////////////////////////////////////////////////////////////////////////////
 // prototypes
 
-static void		recvGiftDroids					(uint8_t from, uint8_t to, uint32_t droidID);
-static void		sendGiftDroids					(uint8_t from, uint8_t to);
-static void		giftResearch					(uint8_t from, uint8_t to, bool send);
+static void recvGiftDroids(PlayerIndex from, PlayerIndex to, uint32_t droidID);
+static void sendGiftDroids(PlayerIndex from, PlayerIndex to);
+static void giftResearch(PlayerIndex from, PlayerIndex to, bool send);
 
 ///////////////////////////////////////////////////////////////////////////////
 // gifts..
 
 bool recvGift(NETQUEUE queue)
 {
-	uint8_t	type, from, to;
+	uint8_t	type;
+	PlayerIndex from, to;
 	int		audioTrack;
 	uint32_t droidID;
 
 	NETbeginDecode(queue, GAME_GIFT);
 		NETuint8_t(&type);
-		NETuint8_t(&from);
-		NETuint8_t(&to);
+		NETuint32_t(&from);
+		NETuint32_t(&to);
 		NETuint32_t(&droidID);
 	NETend();
 
@@ -111,7 +112,7 @@ bool recvGift(NETQUEUE queue)
 	return true;
 }
 
-bool sendGift(uint8_t type, uint8_t to)
+bool sendGift(uint8_t type, PlayerIndex to)
 {
 	int audioTrack;
 
@@ -148,7 +149,7 @@ bool sendGift(uint8_t type, uint8_t to)
 
 // ////////////////////////////////////////////////////////////////////////////
 // give radar information
-void giftRadar(uint8_t from, uint8_t to, bool send)
+void giftRadar(PlayerIndex from, PlayerIndex to, bool send)
 {
 	uint32_t dummy = 0;
 
@@ -158,8 +159,8 @@ void giftRadar(uint8_t from, uint8_t to, bool send)
 
 		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&subType);
-			NETuint8_t(&from);
-			NETuint8_t(&to);
+			NETuint32_t(&from);
+			NETuint32_t(&to);
 			NETuint32_t(&dummy);
 		NETend();
 	}
@@ -180,7 +181,7 @@ void giftRadar(uint8_t from, uint8_t to, bool send)
 //
 // \param from  :player that sent us the droid
 // \param to    :player that should be getting the droid
-static void recvGiftDroids(uint8_t from, uint8_t to, uint32_t droidID)
+static void recvGiftDroids(PlayerIndex from, PlayerIndex to, uint32_t droidID)
 {
 	DROID *psDroid = IdToDroid(droidID, from);
 
@@ -196,7 +197,7 @@ static void recvGiftDroids(uint8_t from, uint8_t to, uint32_t droidID)
 	}
 	else
 	{
-		debug(LOG_ERROR, "Bad droid id %u, from %u to %u", droidID, from, to);
+		debug(LOG_ERROR, "Bad droid id %u, from %u to %u", droidID, (int)from, (int)to);
 	}
 }
 
@@ -205,7 +206,7 @@ static void recvGiftDroids(uint8_t from, uint8_t to, uint32_t droidID)
 //
 // \param from  :player that sent us the droid
 // \param to    :player that should be getting the droid
-static void sendGiftDroids(uint8_t from, uint8_t to)
+static void sendGiftDroids(PlayerIndex from, PlayerIndex to)
 {
 	DROID        *psD;
 	uint8_t      giftType = DROID_GIFT;
@@ -246,8 +247,8 @@ static void sendGiftDroids(uint8_t from, uint8_t to)
 		{
 			NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&giftType);
-			NETuint8_t(&from);
-			NETuint8_t(&to);
+			NETuint32_t(&from);
+			NETuint32_t(&to);
 			// Add the droid to the packet
 			NETuint32_t(&psD->id);
 			NETend();
@@ -261,7 +262,7 @@ static void sendGiftDroids(uint8_t from, uint8_t to)
 
 // ////////////////////////////////////////////////////////////////////////////
 // give technologies.
-static void giftResearch(uint8_t from, uint8_t to, bool send)
+static void giftResearch(PlayerIndex from, PlayerIndex to, bool send)
 {
 	PLAYER_RESEARCH	*pR, *pRto;
 	int		i;
@@ -273,8 +274,8 @@ static void giftResearch(uint8_t from, uint8_t to, bool send)
 
 		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&giftType);
-			NETuint8_t(&from);
-			NETuint8_t(&to);
+			NETuint32_t(&from);
+			NETuint32_t(&to);
 			NETuint32_t(&dummy);
 		NETend();
 	}
@@ -304,7 +305,7 @@ static void giftResearch(uint8_t from, uint8_t to, bool send)
 
 // ////////////////////////////////////////////////////////////////////////////
 // give Power
-void giftPower(uint8_t from, uint8_t to, uint32_t amount, bool send)
+void giftPower(PlayerIndex from, PlayerIndex to, uint32_t amount, bool send)
 {
 	if (send)
 	{
@@ -312,8 +313,8 @@ void giftPower(uint8_t from, uint8_t to, uint32_t amount, bool send)
 
 		NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_GIFT);
 			NETuint8_t(&giftType);
-			NETuint8_t(&from);
-			NETuint8_t(&to);
+			NETuint32_t(&from);
+			NETuint32_t(&to);
 			NETuint32_t(&amount);
 		NETend();
 	}
@@ -345,7 +346,7 @@ void giftPower(uint8_t from, uint8_t to, uint32_t amount, bool send)
 // ////////////////////////////////////////////////////////////////////////////
 // alliance code......
 
-void requestAlliance(uint8_t from, uint8_t to, bool prop, bool allowAudio)
+void requestAlliance(PlayerIndex from, PlayerIndex to, bool prop, bool allowAudio)
 {
 	if (prop && bMultiMessages)
 	{
@@ -380,7 +381,7 @@ void requestAlliance(uint8_t from, uint8_t to, bool prop, bool allowAudio)
 	}
 }
 
-void breakAlliance(uint8_t p1, uint8_t p2, bool prop, bool allowAudio)
+void breakAlliance(PlayerIndex p1, PlayerIndex p2, bool prop, bool allowAudio)
 {
 	char	tm1[128];
 
@@ -407,7 +408,7 @@ void breakAlliance(uint8_t p1, uint8_t p2, bool prop, bool allowAudio)
 	alliancebits[p2] &= ~(1 << p1);
 }
 
-void formAlliance(uint8_t p1, uint8_t p2, bool prop, bool allowAudio, bool allowNotification)
+void formAlliance(PlayerIndex p1, PlayerIndex p2, bool prop, bool allowAudio, bool allowNotification)
 {
 	DROID	*psDroid;
 	char	tm1[128];
@@ -468,11 +469,11 @@ void formAlliance(uint8_t p1, uint8_t p2, bool prop, bool allowAudio, bool allow
 
 
 
-void sendAlliance(uint8_t from, uint8_t to, uint8_t state, int32_t value)
+void sendAlliance(PlayerIndex from, PlayerIndex to, uint8_t state, int32_t value)
 {
 	NETbeginEncode(NETgameQueue(realSelectedPlayer), GAME_ALLIANCE);
-		NETuint8_t(&from);
-		NETuint8_t(&to);
+		NETuint32_t(&from);
+		NETuint32_t(&to);
 		NETuint8_t(&state);
 		NETint32_t(&value);
 	NETend();
@@ -480,12 +481,13 @@ void sendAlliance(uint8_t from, uint8_t to, uint8_t state, int32_t value)
 
 bool recvAlliance(NETQUEUE queue, bool allowAudio)
 {
-	uint8_t to, from, state;
+	PlayerIndex to, from;
+	uint8_t state;
 	int32_t value;
 
 	NETbeginDecode(queue, GAME_ALLIANCE);
-		NETuint8_t(&from);
-		NETuint8_t(&to);
+		NETuint32_t(&from);
+		NETuint32_t(&to);
 		NETuint8_t(&state);
 		NETint32_t(&value);
 	NETend();
@@ -679,7 +681,8 @@ bool addOilDrum(uint8_t count)
 void recvMultiPlayerRandomArtifacts(NETQUEUE queue)
 {
 	int				count, i;
-	uint8_t			quantity, player;
+	uint8_t			quantity;
+	PlayerIndex             player;
 	uint32_t		tx,ty;
 	uint32_t		ref;
 	FEATURE_TYPE            type = FEAT_TREE;  // Dummy initialisation.
@@ -699,7 +702,9 @@ void recvMultiPlayerRandomArtifacts(NETQUEUE queue)
 		NETuint32_t(&tx);
 		NETuint32_t(&ty);
 		NETuint32_t(&ref);
-		NETuint8_t(&player);
+		NETuint32_t(&player);
+
+		ASSERT_OR_RETURN(, player < MAX_PLAYERS, "Invalid player %d", (int)player);
 
 		if (tx == INVALID_XY)
 		{
@@ -726,7 +731,7 @@ void recvMultiPlayerRandomArtifacts(NETQUEUE queue)
 		}
 		else
 		{
-			debug(LOG_ERROR, "Couldn't build feature %u for player %u ?", ref, player);
+			debug(LOG_ERROR, "Couldn't build feature %u for player %u ?", ref, (int)player);
 		}
 	}
 	NETend();

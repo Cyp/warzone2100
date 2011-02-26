@@ -136,14 +136,15 @@ enum MESSAGE_TYPES
 #define password_string_size 64		// longer passwords slow down the join code
 
 #define MAX_OBSERVERS           10
-#define MAX_CONNECTED_PLAYERS   (MAX_PLAYERS + MAX_OBSERVERS)
+#define MAX_CLIENTS             (MAX_PLAYERS + MAX_OBSERVERS)
 #define MAX_TMP_SOCKETS         16
 
 // ////////////////////////////////////////////////////////////////////////
 // Message information. ie. the packets sent between machines.
 
-#define NET_ALL_PLAYERS 255
-#define NET_HOST_ONLY 0
+#define NET_ALL_PLAYERSx PlayerIndex(255)  // Should rename to NET_ALL_PLAYERS, after renaming NET_ALL_PLAYERS to NET_ALL_CLIENTS.
+#define NET_ALL_PLAYERS ClientIndex(255)
+#define NET_HOST_ONLY ClientIndex(0)
 // the following structure is going to be used to track if we sync or not
 struct SYNC_COUNTER
 {
@@ -198,10 +199,10 @@ enum
 // ////////////////////////////////////////////////////////////////////////
 // Player information. Filled when players join, never re-ordered. selectedPlayer global points to 
 // currently controlled player.
-struct PLAYER
+struct CLIENT
 {
 	char		name[StringSize];	///< Player name
-	int32_t		position;		///< Map starting position
+	PlayerIndex     position;               ///< Player number corresponding to this client, map starting position
 	int32_t		colour;			///< Which colour slot this player is using
 	bool		allocated;		///< Allocated as a human player
 	uint32_t	heartattacktime;	///< Time cardiac arrest started
@@ -217,14 +218,20 @@ struct PLAYER
 	char		IPtextAddress[40];	///< IP of this player
 };
 
+struct PLAYER
+{
+	ClientIndex     client;                 ///< Client index of the player in this position.
+};
+
 // ////////////////////////////////////////////////////////////////////////
 // all the luvly Netplay info....
 struct NETPLAY
 {
-	PLAYER          players[MAX_CONNECTED_PLAYERS];         ///< The array of players.
+	CLIENT          players[MAX_CLIENTS];   ///< The array of clients. (Should probably be renamed to "clients".)
+	PLAYER          pLaYeRs[MAX_PLAYERS];   ///< The array of players. (Should be renames to "players" after renaming players to "clients".)
 	uint32_t	maxPlayers;				///< Maximum number of players.
 	uint32_t	playercount;		///< Number of players in game.
-	uint32_t	hostPlayer;		///< Index of host in player array
+	ClientIndex     hostPlayer;             ///< Index of host in player array, always 0.
 	uint32_t	bComms;			///< Actually do the comms?
 	bool		isHost;			///< True if we are hosting the game
 	bool		isUPNP;					// if we want the UPnP detection routines to run
@@ -301,16 +308,26 @@ extern unsigned int NETgetGameserverPort(void);
 extern bool NETsetupTCPIP(const char *machine);
 extern void NETsetGamePassword(const char *password);
 extern void NETBroadcastPlayerInfo(uint32_t index);
-void NETBroadcastTwoPlayerInfo(uint32_t index1, uint32_t index2);
+void NETBroadcastTwoPlayerInfo(ClientIndex index1, ClientIndex index2);
 extern bool NETisCorrectVersion(uint32_t game_version_major, uint32_t game_version_minor);
-void NET_InitPlayer(int i, bool initPosition);
+void NET_InitPlayer(ClientIndex i, bool initPosition);
 extern void NET_InitPlayers(void);
 
 void NETGameLocked(bool flag);
 void NETresetGamePassword(void);
 
-void NETsetPlayerConnectionStatus(CONNECTION_STATUS status, unsigned player);    ///< Cumulative, except that CONNECTIONSTATUS_NORMAL resets.
-bool NETcheckPlayerConnectionStatus(CONNECTION_STATUS status, unsigned player);  ///< True iff connection status icon hasn't expired for this player. CONNECTIONSTATUS_NORMAL means any status, NET_ALL_PLAYERS means all players.
+void NETsetPlayerConnectionStatus(CONNECTION_STATUS status, ClientIndex client);    ///< Cumulative, except that CONNECTIONSTATUS_NORMAL resets.
+void NETsetPlayerConnectionStatus(CONNECTION_STATUS status, PlayerIndex player);    ///< Cumulative, except that CONNECTIONSTATUS_NORMAL resets.
+bool NETcheckPlayerConnectionStatus(CONNECTION_STATUS status, PlayerIndex player);  ///< True iff connection status icon hasn't expired for this player. CONNECTIONSTATUS_NORMAL means any status, NET_ALL_PLAYERS means all players.
+
+static inline ClientIndex clientOf(PlayerIndex i)  ///< Returns a valid client, which may be unallocated.
+{
+	return NetPlay.pLaYeRs[i].client;
+}
+static inline PlayerIndex playerOf(ClientIndex i)  ///< Returns a valid player, or PLAYER_OBSERVER.
+{
+	return NetPlay.players[i].position;
+}
 
 const char *messageTypeToString(unsigned messageType);
 

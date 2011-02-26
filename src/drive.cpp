@@ -68,7 +68,6 @@
 
 static	SWORD DrivingAudioTrack=-1;		// Which hardware channel are we using for the car driving noise
 
-extern UDWORD selectedPlayer;
 extern bool DirectControl;
 
 // Driving characteristics.

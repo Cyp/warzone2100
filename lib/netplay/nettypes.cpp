@@ -48,7 +48,7 @@ static NetQueue *gameQueues[MAX_PLAYERS] = {NULL, NULL, NULL, NULL, NULL, NULL, 
 
 /// There is a bidirectional net queue for communicating with each client or host. Each queue corresponds either to a real socket, or a virtual socket
 /// which routes via the host.
-static NetQueuePair *netQueues[MAX_CONNECTED_PLAYERS] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+static NetQueuePair *netQueues[MAX_CLIENTS] = {NULL};
 
 /// These queues are for clients which just connected, but haven't yet been assigned a player number.
 static NetQueuePair *tmpQueues[MAX_TMP_SOCKETS] = {NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
@@ -323,7 +323,7 @@ NETQUEUE NETnetTmpQueue(unsigned tmpPlayer)
 	return ret;
 }
 
-NETQUEUE NETnetQueue(unsigned player)
+NETQUEUE NETnetQueue(ClientIndex player)
 {
 	NETQUEUE ret;
 
@@ -332,7 +332,7 @@ NETQUEUE NETnetQueue(unsigned player)
 		return NETbroadcastQueue();
 	}
 
-	ASSERT(player < MAX_CONNECTED_PLAYERS, "Huh?");
+	ASSERT(player < MAX_CLIENTS, "Huh?");
 	NetQueuePair **queue = &netQueues[player];
 	ret.queue = queue;
 	ret.isPair = true;
@@ -341,7 +341,7 @@ NETQUEUE NETnetQueue(unsigned player)
 	return ret;
 }
 
-NETQUEUE NETgameQueue(unsigned player)
+NETQUEUE NETgameQueue(PlayerIndex player)
 {
 	NETQUEUE ret;
 	ASSERT(player < MAX_PLAYERS, "Huh?");

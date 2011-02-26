@@ -46,7 +46,6 @@
 #include <vector>
 #include <algorithm>
 
-#define ANYPLAYER	99
 
 enum SubType
 {
@@ -102,7 +101,7 @@ struct QueuedDroidInfo
 		return 0;
 	}
 
-	uint8_t     player;
+	PlayerIndex player;
 	uint32_t    droidId;
 	SubType     subType;
 	// subType == ObjOrder || subType == LocOrder
@@ -356,13 +355,13 @@ bool recvDroidDisEmbark(NETQUEUE queue)
 
 // ////////////////////////////////////////////////////////////////////////////
 // Send a new Droid to the other players
-bool SendDroid(const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, uint8_t player, uint32_t id, const INITIAL_DROID_ORDERS *initialOrdersP)
+bool SendDroid(const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, PlayerIndex player, uint32_t id, const INITIAL_DROID_ORDERS *initialOrdersP)
 {
 	if (!bMultiMessages)
 		return true;
 
 	ASSERT(x != 0 && y != 0, "SendDroid: Invalid droid coordinates");
-	ASSERT( player < MAX_PLAYERS, "invalid player %u", player);
+	ASSERT(player < MAX_PLAYERS, "invalid player %u", (int)player);
 
 	// Dont send other droids during campaign setup
 	if (ingame.localJoiningInProgress)
@@ -384,7 +383,7 @@ bool SendDroid(const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, uint8_t 
 		uint32_t templateID = pTemplate->multiPlayerID;
 		bool haveInitialOrders = initialOrdersP != NULL;
 
-		NETuint8_t(&player);
+		NETuint32_t(&player);
 		NETuint32_t(&id);
 		NETPosition(&pos);
 		NETuint32_t(&templateID);
@@ -398,7 +397,7 @@ bool SendDroid(const DROID_TEMPLATE* pTemplate, uint32_t x, uint32_t y, uint8_t 
 			NETuint32_t(&initialOrders.factoryId);  // For making scripts happy.
 		}
 	}
-	debug(LOG_LIFE, "===> sending Droid from %u id of %u ",player,id);
+	debug(LOG_LIFE, "===> sending Droid from %u id of %u ", (int)player, id);
 	return NETend();
 }
 
@@ -408,7 +407,7 @@ bool recvDroid(NETQUEUE queue)
 {
 	DROID_TEMPLATE* pT;
 	DROID* psDroid;
-	uint8_t player;
+	PlayerIndex player;
 	uint32_t id;
 	Position pos;
 	uint32_t templateID;
@@ -417,7 +416,7 @@ bool recvDroid(NETQUEUE queue)
 
 	NETbeginDecode(queue, GAME_DROID);
 	{
-		NETuint8_t(&player);
+		NETuint32_t(&player);
 		NETuint32_t(&id);
 		NETPosition(&pos);
 		NETuint32_t(&templateID);
@@ -434,13 +433,13 @@ bool recvDroid(NETQUEUE queue)
 	}
 	NETend();
 
-	ASSERT( player < MAX_PLAYERS, "invalid player %u", player);
+	ASSERT( player < MAX_PLAYERS, "invalid player %u", (int)player);
 
-	debug(LOG_LIFE, "<=== getting Droid from %u id of %u ",player,id);
+	debug(LOG_LIFE, "<=== getting Droid from %u id of %u ", (int)player, id);
 	if ((pos.x == 0 && pos.y == 0) || pos.x > world_coord(mapWidth) || pos.y > world_coord(mapHeight))
 	{
 		debug(LOG_ERROR, "Received bad droid position (%d, %d) from %d about p%d (%s)", (int)pos.x, (int)pos.y,
-				queue.index, player, isHumanPlayer(player) ? "Human" : "AI");
+				queue.index, (int)player, isHumanPlayer(player) ? "Human" : "AI");
 		return false;
 	}
 
@@ -448,7 +447,7 @@ bool recvDroid(NETQUEUE queue)
 	if (!pT)
 	{
 		debug(LOG_ERROR, "Packet from %d refers to non-existent template %u, [%s : p%d]",
-				queue.index, templateID, isHumanPlayer(player) ? "Human" : "AI", player);
+				queue.index, templateID, isHumanPlayer(player) ? "Human" : "AI", (int)player);
 		return false;
 	}
 
@@ -473,7 +472,7 @@ bool recvDroid(NETQUEUE queue)
 	else
 	{
 		debug(LOG_ERROR, "Packet from %d cannot create droid for p%d (%s)!", queue.index,
-			player, isHumanPlayer(player) ? "Human" : "AI");
+			(int)player, isHumanPlayer(player) ? "Human" : "AI");
 #ifdef DEBUG
 		CONPRINTF(ConsoleString, (ConsoleString, "MULTIPLAYER: Couldn't build a remote droid, relying on checking to resync"));
 #endif
@@ -487,7 +486,7 @@ bool recvDroid(NETQUEUE queue)
 /// Does not read/write info->droidId!
 static void NETQueuedDroidInfo(QueuedDroidInfo *info)
 {
-	NETuint8_t(&info->player);
+	NETuint32_t(&info->player);
 	NETenum(&info->subType);
 	switch (info->subType)
 	{
@@ -677,7 +676,7 @@ bool recvDroidInfo(NETQUEUE queue)
 			if (!psDroid)
 			{
 				debug(LOG_NEVER, "Packet from %d refers to non-existent droid %u, [%s : p%d]",
-				      queue.index, info.droidId, isHumanPlayer(info.player) ? "Human" : "AI", info.player);
+				      queue.index, info.droidId, isHumanPlayer(info.player) ? "Human" : "AI", (int)info.player);
 				syncDebug("Droid %d missing", info.droidId);
 				continue;  // Can't find the droid, so skip this droid.
 			}
