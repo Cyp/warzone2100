@@ -42,6 +42,8 @@
 #include "src/console.h"
 #include "src/levels.h"
 
+bool bShaderlessTeamcolourHack = false;
+
 /* global used to indicate preferred internal OpenGL format */
 int wz_texture_compression = 0;
 
@@ -147,8 +149,9 @@ bool screenInitialise()
 	}
 	else
 	{
-		debug(LOG_FATAL, "OpenGL 2.0 is not supported by your system. The game require this. Please upgrade your graphics drivers, if possible.");
-		exit(1);
+		debug(LOG_POPUP, "OpenGL 2.0 is not supported by your system, current shaders require this.");
+		debug(LOG_POPUP, "Team colors will look weird on your system, but sort-of work.");
+		bShaderlessTeamcolourHack = true;
 	}
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);

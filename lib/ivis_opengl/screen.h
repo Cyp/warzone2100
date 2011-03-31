@@ -36,6 +36,8 @@
 #include "lib/framework/types.h"
 #include "lib/framework/vector.h"
 
+extern bool bShaderlessTeamcolourHack;
+
 /* ------------------------------------------------------------------------------------------- */
 
 /* Legacy stuff
