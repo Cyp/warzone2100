@@ -48,8 +48,9 @@ bool selfTest = false;
  *	Player globals
  */
 
-uint32_t selectedPlayer = 0;  /**< Current player */
+uint32_t selectedPlayer = 0;
 uint32_t realSelectedPlayer = 0;
+uint32_t selectedClient = 0;
 
 
 /************************************************************************************
