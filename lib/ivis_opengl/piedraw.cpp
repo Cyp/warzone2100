@@ -280,28 +280,71 @@ static void pie_Draw3DShape2(iIMDShape *shape, int frame, PIELIGHT colour, PIELI
 	}
 }
 
-static inline bool edgeLessThan(EDGE const &e1, EDGE const &e2)
-{
-	if (e1.from != e2.from) return e1.from < e2.from;
-	return e1.to < e2.to;
-}
-
-static inline bool edgeEqual(EDGE const &e1, EDGE const &e2)
-{
-	return e1.from == e2.from && e1.to == e2.to;
-}
-
-static inline void flipEdge(EDGE &e)
-{
-	std::swap(e.from, e.to);
-}
-
 /// Add an edge to an edgelist
 /// Makes sure only silhouette edges are present
 static inline void addToEdgeList(int a, int b, std::vector<EDGE> &edgelist)
 {
 	EDGE newEdge = {a, b};
 	edgelist.push_back(newEdge);
+}
+
+// Compressed EDGE, assumes the edge indices are never larger than 32767.
+struct CompressedEdge
+{
+	CompressedEdge() {}
+	CompressedEdge(EDGE const &e) : v(e.from < e.to? e.from<<16 | e.to<<1 :  e.from<<1 | e.to<<16 | 1) {}
+	operator EDGE() const
+	{
+		EDGE e;
+		if ((v&1) == 0)
+		{
+			e.from = v>>16;
+			e.to = v>>1 & 0x7FFF;
+		}
+		else
+		{
+			e.to = v>>16;
+			e.from = v>>1 & 0x7FFF;
+		}
+		return e;
+	}
+	bool operator <(CompressedEdge const &b) const { return v < b.v; }
+	bool isMatching(CompressedEdge const &b) const { return (v^b.v) == 1; }
+	unsigned v;
+};
+
+void removeMatchingEdges(std::vector<EDGE> &edgelist)
+{
+	// Convert list to CompressedEdge type.
+	static std::vector<CompressedEdge> edges;  // Static, to save allocations.
+	edges.assign(edgelist.begin(), edgelist.end());
+
+	// Sort edges, placing matching edges next to each other.
+	std::sort(edges.begin(), edges.end());
+
+	// Make room for filtered list.
+	static std::vector<CompressedEdge> edgesFiltered;  // Static, to save allocations.
+	edgesFiltered.resize(edges.size());
+
+	// Filter the list, removing matching edge pairs.
+	unsigned size = edges.size();
+	unsigned out = 0;
+	for (unsigned in = 0; in < size; ++in)
+	{
+		if (out == 0 || !edgesFiltered[out - 1].isMatching(edges[in]))
+		{
+			edgesFiltered[out] = edges[in];
+			++out;
+		}
+		else
+		{
+			--out;
+		}
+	}
+	edgesFiltered.resize(out);
+
+	// Convert back to EDGE.
+	edgelist.assign(edgesFiltered.begin(), edgesFiltered.end());
 }
 
 /// scale the height according to the flags
@@ -326,8 +369,6 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 	Vector3f *pVertices;
 	iIMDPoly *pPolys;
 	static std::vector<EDGE> edgelist;  // Static, to save allocations.
-	static std::vector<EDGE> edgelistFlipped;  // Static, to save allocations.
-	static std::vector<EDGE> edgelistFiltered;  // Static, to save allocations.
 	EDGE *drawlist = NULL;
 
 	unsigned edge_count;
@@ -362,16 +403,11 @@ static void pie_DrawShadow(iIMDShape *shape, int flag, int flag_data, Vector3f* 
 			}
 		}
 
-		// Remove duplicate pairs from the edge list. For example, in the list ((1 2), (2 6), (6 2), (3, 4)), remove (2 6) and (6 2).
-		edgelistFlipped = edgelist;
-		std::for_each(edgelistFlipped.begin(), edgelistFlipped.end(), flipEdge);
-		std::sort(edgelist.begin(), edgelist.end(), edgeLessThan);
-		std::sort(edgelistFlipped.begin(), edgelistFlipped.end(), edgeLessThan);
-		edgelistFiltered.resize(edgelist.size());
-		edgelistFiltered.erase(std::set_difference(edgelist.begin(), edgelist.end(), edgelistFlipped.begin(), edgelistFlipped.end(), edgelistFiltered.begin(), edgeLessThan), edgelistFiltered.end());
+		// Remove duplicate pairs from the edge list. For example, in the list ((1 2), (2 6), (6 2), (6 2), (3 4)), remove the (2 6) and one of the (6 2)s.
+		removeMatchingEdges(edgelist);
 
-		drawlist = &edgelistFiltered[0];
-		edge_count = edgelistFiltered.size();
+		drawlist = &edgelist[0];
+		edge_count = edgelist.size();
 		//debug(LOG_WARNING, "we have %i edges", edge_count);
 
 		if(flag & pie_STATIC_SHADOW)
