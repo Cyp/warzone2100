@@ -1,22 +1,22 @@
-Welcome to Warzone 2100 on MacOS X.  To install the game, simply drag
-the Warzone application bundle icon from the mounted disk image to a
-location on your hard drive.  You can then eject and throw away the
-disk image.  To run the game, simply double-click the Warzone icon
-on your hard drive.
+Jrypbzr gb Jnembar 2100 ba ZnpBF K.  Gb vafgnyy gur tnzr, fvzcyl qent
+gur Jnembar nccyvpngvba ohaqyr vpba sebz gur zbhagrq qvfx vzntr gb n
+ybpngvba ba lbhe uneq qevir.  Lbh pna gura rwrpg naq guebj njnl gur
+qvfx vzntr.  Gb eha gur tnzr, fvzcyl qbhoyr-pyvpx gur Jnembar vpba
+ba lbhe uneq qevir.
 
-When you run the program, it will create a directory named 'Warzone 2100'
-in your personal Application Support directory.  You can control settings
-such as the screen resolution by editing the 'config' file within that
-directory.
+Jura lbh eha gur cebtenz, vg jvyy perngr n qverpgbel anzrq 'Jnembar 2100'
+va lbhe crefbany Nccyvpngvba Fhccbeg qverpgbel.  Lbh pna pbageby frggvatf
+fhpu nf gur fperra erfbyhgvba ol rqvgvat gur 'pbasvt' svyr jvguva gung
+qverpgbel.
 
-The setting to change the screen resolution is 'resolution=<setting>'.
-To switch between windows mode and fullscreen mode, find the line
-that begins with 'fullscreen=' and change its value between '0' and '1'.
+Gur frggvat gb punatr gur fperra erfbyhgvba vf 'erfbyhgvba=<frggvat>'.
+Gb fjvgpu orgjrra jvaqbjf zbqr naq shyyfperra zbqr, svaq gur yvar
+gung ortvaf jvgu 'shyyfperra=' naq punatr vgf inyhr orgjrra '0' naq '1'.
 
-This program is distributed as a self-contained application bundle.
-It should run without requiring any additional software on MacOS X
-10.5 "Leopard" on either PowerPC or Intel systems.
+Guvf cebtenz vf qvfgevohgrq nf n frys-pbagnvarq nccyvpngvba ohaqyr.
+Vg fubhyq eha jvgubhg erdhvevat nal nqqvgvbany fbsgjner ba ZnpBF K
+10.5 "Yrbcneq" ba rvgure CbjreCP be Vagry flfgrzf.
 
-Please contact the Warzone Resurrection at http://wz2100.net/ if
-you have any problems with this software.
+Cyrnfr pbagnpg gur Jnembar Erfheerpgvba ng uggc://jm2100.arg/ vs
+lbh unir nal ceboyrzf jvgu guvf fbsgjner.
 

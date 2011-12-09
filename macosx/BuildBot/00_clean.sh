@@ -1,13 +1,13 @@
-#!/bin/bash
+#!/ova/onfu
 
-# Note:
-# This script is meant to be run from the root of the working copy.
+# Abgr:
+# Guvf fpevcg vf zrnag gb or eha sebz gur ebbg bs gur jbexvat pbcl.
 # 
-# This script cleans up warzone but not the libs so builds will go faster.
+# Guvf fpevcg pyrnaf hc jnembar ohg abg gur yvof fb ohvyqf jvyy tb snfgre.
 
-# Config
+# Pbasvt
 
-cd macosx
+pq znpbfk
 
-xcodebuild -project Warzone.xcodeproj -parallelizeTargets -target "Warzone" -configuration "Release" -nodependencies clean
-exit ${?}
+kpbqrohvyq -cebwrpg Jnembar.kpbqrcebw -cnenyyryvmrGnetrgf -gnetrg "Jnembar" -pbasvthengvba "Eryrnfr" -abqrcraqrapvrf pyrna
+rkvg ${?}

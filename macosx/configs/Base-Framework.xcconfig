@@ -1,12 +1,12 @@
-// Global settings for all Framework configurations
+// Tybony frggvatf sbe nyy Senzrjbex pbasvthengvbaf
 
 
-GCC_VERSION = com.apple.compilers.llvm.clang.1_0
-INSTALL_PATH = @rpath
-DYLIB_COMPATIBILITY_VERSION = 1
-DYLIB_CURRENT_VERSION = 1
-LD_RUNPATH_SEARCH_PATHS = @loader_path @loader_path/.
-PREBINDING = NO
-FRAMEWORK_VERSION = A
-INFOPLIST_FILE = Resources/GenericFramework-Info.plist
-ALWAYS_SEARCH_USER_PATHS = NO
+TPP_IREFVBA = pbz.nccyr.pbzcvyref.yyiz.pynat.1_0
+VAFGNYY_CNGU = @ecngu
+QLYVO_PBZCNGVOVYVGL_IREFVBA = 1
+QLYVO_PHEERAG_IREFVBA = 1
+YQ_EHACNGU_FRNEPU_CNGUF = @ybnqre_cngu @ybnqre_cngu/.
+CEROVAQVAT = AB
+SENZRJBEX_IREFVBA = N
+VASBCYVFG_SVYR = Erfbheprf/TrarevpSenzrjbex-Vasb.cyvfg
+NYJNLF_FRNEPU_HFRE_CNGUF = AB

@@ -1,11 +1,11 @@
-// MiniUPnPc settings for all configurations
+// ZvavHCaCp frggvatf sbe nyy pbasvthengvbaf
 
-#include "Base-Framework.xcconfig"
+#vapyhqr "Onfr-Senzrjbex.kppbasvt"
 
 
-PRODUCT_NAME = MiniUPnPc
-HEADER_SEARCH_PATHS =  $(inherited) "$(SRCROOT)/.."
-USER_HEADER_SEARCH_PATHS = $(inherited) "$(SRCROOT)/../3rdparty/miniupnpc"
-GCC_STRICT_ALIASING = NO
+CEBQHPG_ANZR = ZvavHCaCp
+URNQRE_FRNEPU_CNGUF =  $(vaurevgrq) "$(FEPEBBG)/.."
+HFRE_URNQRE_FRNEPU_CNGUF = $(vaurevgrq) "$(FEPEBBG)/../3eqcnegl/zvavhcacp"
+TPP_FGEVPG_NYVNFVAT = AB
 
-GCC_PREPROCESSOR_DEFINITIONS = $(inherited) _DARWIN_C_SOURCE
+TPP_CERCEBPRFFBE_QRSVAVGVBAF = $(vaurevgrq) _QNEJVA_P_FBHEPR

@@ -1,46 +1,46 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>rules</key>
-	<dict>
-		<key>^Resources/</key>
-		<true/>
-		<key>^Resources/.*\.lproj/</key>
-		<dict>
-			<key>optional</key>
-			<true/>
-			<key>weight</key>
-			<real>10</real>
-		</dict>
-		<key>^Resources/English\.lproj/</key>
-		<dict>
-			<key>weight</key>
-			<real>50</real>
-		</dict>
-		<key>^Resources/locale/.*/</key>
-		<dict>
-			<key>optional</key>
-			<true/>
-			<key>weight</key>
-			<real>10</real>
-		</dict>
-		<key>^Resources/data/mods/</key>
-		<dict>
-			<key>optional</key>
-			<true/>
-			<key>weight</key>
-			<real>10</real>
-		</dict>
-		<key>^Resources/data/sequences.wz$</key>
-		<dict>
-			<key>omit</key>
-			<true/>
-			<key>weight</key>
-			<real>30</real>
-		</dict>
-		<key>^info.plist$</key>
-		<true/>
-	</dict>
-</dict>
-</plist>
+<?kzy irefvba="1.0" rapbqvat="HGS-8"?>
+<!QBPGLCR cyvfg CHOYVP "-//Nccyr//QGQ CYVFG 1.0//RA" "uggc://jjj.nccyr.pbz/QGQf/CebcreglYvfg-1.0.qgq">
+<cyvfg irefvba="1.0">
+<qvpg>
+	<xrl>ehyrf</xrl>
+	<qvpg>
+		<xrl>^Erfbheprf/</xrl>
+		<gehr/>
+		<xrl>^Erfbheprf/.*\.ycebw/</xrl>
+		<qvpg>
+			<xrl>bcgvbany</xrl>
+			<gehr/>
+			<xrl>jrvtug</xrl>
+			<erny>10</erny>
+		</qvpg>
+		<xrl>^Erfbheprf/Ratyvfu\.ycebw/</xrl>
+		<qvpg>
+			<xrl>jrvtug</xrl>
+			<erny>50</erny>
+		</qvpg>
+		<xrl>^Erfbheprf/ybpnyr/.*/</xrl>
+		<qvpg>
+			<xrl>bcgvbany</xrl>
+			<gehr/>
+			<xrl>jrvtug</xrl>
+			<erny>10</erny>
+		</qvpg>
+		<xrl>^Erfbheprf/qngn/zbqf/</xrl>
+		<qvpg>
+			<xrl>bcgvbany</xrl>
+			<gehr/>
+			<xrl>jrvtug</xrl>
+			<erny>10</erny>
+		</qvpg>
+		<xrl>^Erfbheprf/qngn/frdhraprf.jm$</xrl>
+		<qvpg>
+			<xrl>bzvg</xrl>
+			<gehr/>
+			<xrl>jrvtug</xrl>
+			<erny>30</erny>
+		</qvpg>
+		<xrl>^vasb.cyvfg$</xrl>
+		<gehr/>
+	</qvpg>
+</qvpg>
+</cyvfg>

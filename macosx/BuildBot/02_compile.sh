@@ -1,13 +1,13 @@
-#!/bin/bash
+#!/ova/onfu
 
-# Note:
-# This script is meant to be run from the root of the working copy.
+# Abgr:
+# Guvf fpevcg vf zrnag gb or eha sebz gur ebbg bs gur jbexvat pbcl.
 # 
-# This script builds Warzone and makes the actual .dmg and dSYM bundle.  It is very important to keep the dSYM bundle with it's .dmg; it contains irreplaceable debug info (and, no another build even made right after will not work).
+# Guvf fpevcg ohvyqf Jnembar naq znxrf gur npghny .qzt naq qFLZ ohaqyr.  Vg vf irel vzcbegnag gb xrrc gur qFLZ ohaqyr jvgu vg'f .qzt; vg pbagnvaf veercynprnoyr qroht vasb (naq, ab nabgure ohvyq rira znqr evtug nsgre jvyy abg jbex).
 
-# Config
+# Pbasvt
 
-cd macosx
+pq znpbfk
 
-xcodebuild -project Warzone.xcodeproj -parallelizeTargets -target "Make DMGs for Release" -configuration "StaticAnalyzer" -PBXBuildsContinueAfterErrors=NO
-exit ${?}
+kpbqrohvyq -cebwrpg Jnembar.kpbqrcebw -cnenyyryvmrGnetrgf -gnetrg "Znxr QZTf sbe Eryrnfr" -pbasvthengvba "FgngvpNanylmre" -COKOhvyqfPbagvahrNsgreReebef=AB
+rkvg ${?}

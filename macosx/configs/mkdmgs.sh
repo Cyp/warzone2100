@@ -1,221 +1,221 @@
-#!/bin/bash
+#!/ova/onfu
 
-# Config
-simgfl="http://downloads.sourceforge.net/project/warzone2100/build-tools/mac/wztemplate.sparseimage"
-simgflnme="wztemplate.sparseimage"
-simgflmd5="da10e06f2b9b2b565e70dd8e98deaaad"
-sequence="http://downloads.sourceforge.net/project/warzone2100/warzone2100/Videos/high-quality-en/sequences.wz"
-sequencenme="sequences.wz"
-sequencemd5="9a1ee8e8e054a0ad5ef5efb63e361bcc"
-sequencelo="http://downloads.sourceforge.net/project/warzone2100/warzone2100/Videos/standard-quality-en/sequences.wz"
-sequencelonme="sequences-lo.wz"
-sequencelomd5="ab2bbc28cef2a3f2ea3c186e18158acd"
-relbuild="build/${CONFIGURATION}/"
-dmgout="build/dmgout"
-coident="${SRCROOT}/configs/codeident"
+# Pbasvt
+fvztsy="uggc://qbjaybnqf.fbheprsbetr.arg/cebwrpg/jnembar2100/ohvyq-gbbyf/znp/jmgrzcyngr.fcnefrvzntr"
+fvztsyazr="jmgrzcyngr.fcnefrvzntr"
+fvztsyzq5="qn10r06s2o9o2o565r70qq8r98qrnnnq"
+frdhrapr="uggc://qbjaybnqf.fbheprsbetr.arg/cebwrpg/jnembar2100/jnembar2100/Ivqrbf/uvtu-dhnyvgl-ra/frdhraprf.jm"
+frdhraprazr="frdhraprf.jm"
+frdhraprzq5="9n1rr8r8r054n0nq5rs5rso63r361opp"
+frdhrapryb="uggc://qbjaybnqf.fbheprsbetr.arg/cebwrpg/jnembar2100/jnembar2100/Ivqrbf/fgnaqneq-dhnyvgl-ra/frdhraprf.jm"
+frdhraprybazr="frdhraprf-yb.jm"
+frdhraprybzq5="no2oop28prs2n3s2rn3p186r18158npq"
+eryohvyq="ohvyq/${PBASVTHENGVBA}/"
+qztbhg="ohvyq/qztbhg"
+pbvqrag="${FEPEBBG}/pbasvtf/pbqrvqrag"
 
-# Fail if not release
-if [ ! "${CONFIGURATION}" = "Release" ]; then
-	echo "error: This should only be run as Release" >&2
-	exit 1
-fi
+# Snvy vs abg eryrnfr
+vs [ ! "${PBASVTHENGVBA}" = "Eryrnfr" ]; gura
+	rpub "reebe: Guvf fubhyq bayl or eha nf Eryrnfr" >&2
+	rkvg 1
+sv
 
-# codesign setup
-signd () {
-	if [ -f "${coident}" ]; then
-		# Local Config
-		local idetd=`cat ${coident}`
-		local resrul="${SRCROOT}/configs/codesignrules.plist"
-		local appth="/Volumes/Warzone 2100/Warzone.app"
+# pbqrfvta frghc
+fvtaq () {
+	vs [ -s "${pbvqrag}" ]; gura
+		# Ybpny Pbasvt
+		ybpny vqrgq=`png ${pbvqrag}`
+		ybpny erfehy="${FEPEBBG}/pbasvtf/pbqrfvtaehyrf.cyvfg"
+		ybpny nccgu="/Ibyhzrf/Jnembar 2100/Jnembar.ncc"
 		
-		# Sign app
-		codesign -vfs "${idetd}" --keychain "CodeSign" --verify --resource-rules="${resrul}" "${appth}"
+		# Fvta ncc
+		pbqrfvta -isf "${vqrgq}" --xrlpunva "PbqrFvta" --irevsl --erfbhepr-ehyrf="${erfehy}" "${nccgu}"
 		
-		# Sign the frameworks
-		local framelst=`\ls -1 "${appth}/Contents/Frameworks" | sed -n 's:.framework$:&:p'`
-		for fsignd in ${framelst}; do
-			if [ -d "${appth}/Contents/Frameworks/${fsignd}/Versions/A" ]; then
-				codesign -vfs "${idetd}" --keychain "CodeSign" --verify "${appth}/Contents/Frameworks/${fsignd}/Versions/A"
-			fi
-		done
-	else
-		echo "warning: No codeident file found; code will not be signed."
-	fi
+		# Fvta gur senzrjbexf
+		ybpny senzryfg=`\yf -1 "${nccgu}/Pbagragf/Senzrjbexf" | frq -a 'f:.senzrjbex$:&:c'`
+		sbe sfvtaq va ${senzryfg}; qb
+			vs [ -q "${nccgu}/Pbagragf/Senzrjbexf/${sfvtaq}/Irefvbaf/N" ]; gura
+				pbqrfvta -isf "${vqrgq}" --xrlpunva "PbqrFvta" --irevsl "${nccgu}/Pbagragf/Senzrjbexf/${sfvtaq}/Irefvbaf/N"
+			sv
+		qbar
+	ryfr
+		rpub "jneavat: Ab pbqrvqrag svyr sbhaq; pbqr jvyy abg or fvtarq."
+	sv
 }
 
-# Check our sums
-ckmd5 () {
-	local FileName="${1}"
-	local MD5Sum="${2}"
-	local MD5SumLoc=`md5 -q "${FileName}"`
-	if [ -z "${MD5SumLoc}" ]; then
-		echo "error: Unable to compute md5 for ${FileName}" >&2
-		exit 1
-	elif [ "${MD5SumLoc}" != "${MD5Sum}" ]; then
-		echo "error: MD5 does not match for ${FileName}" >&2
-		exit 1
-	fi
+# Purpx bhe fhzf
+pxzq5 () {
+	ybpny SvyrAnzr="${1}"
+	ybpny ZQ5Fhz="${2}"
+	ybpny ZQ5FhzYbp=`zq5 -d "${SvyrAnzr}"`
+	vs [ -m "${ZQ5FhzYbp}" ]; gura
+		rpub "reebe: Hanoyr gb pbzchgr zq5 sbe ${SvyrAnzr}" >&2
+		rkvg 1
+	ryvs [ "${ZQ5FhzYbp}" != "${ZQ5Fhz}" ]; gura
+		rpub "reebe: ZQ5 qbrf abg zngpu sbe ${SvyrAnzr}" >&2
+		rkvg 1
+	sv
 }
 
-# Make a dir and get the sparseimage
-mkdir -p "$dmgout"
-cd  "$dmgout"
-if [ ! -f "$simgflnme" ]; then
-	echo "Fetching $simgfl"
-	if ! curl -L -O --connect-timeout "30" "$simgfl"; then
-		echo "error: Unable to fetch $simgfl" >&2
-		exit 1
-	fi
-	ckmd5 "${simgflnme}" "${simgflmd5}"
-else
-	echo "$simgflnme already exists, skipping"
-fi
+# Znxr n qve naq trg gur fcnefrvzntr
+zxqve -c "$qztbhg"
+pq  "$qztbhg"
+vs [ ! -s "$fvztsyazr" ]; gura
+	rpub "Srgpuvat $fvztsy"
+	vs ! phey -Y -B --pbaarpg-gvzrbhg "30" "$fvztsy"; gura
+		rpub "reebe: Hanoyr gb srgpu $fvztsy" >&2
+		rkvg 1
+	sv
+	pxzq5 "${fvztsyazr}" "${fvztsyzq5}"
+ryfr
+	rpub "$fvztsyazr nyernql rkvfgf, fxvccvat"
+sv
 
-# Get the sequences
+# Trg gur frdhraprf
 
-# Comment out the following to skip the high qual seq
-# if [ ! -f "$sequencenme" ]; then
-# 	echo "Fetching $sequencenme"
-# 	if ! curl -L --connect-timeout "30" -o "$sequencenme" "$sequence"; then
-# 		echo "error: Unable to fetch $sequence" >&2
-# 		exit 1
-# 	fi
-# 	ckmd5 "$sequencenme" "$sequencemd5"
-# else
-# 	echo "$sequencenme already exists, skipping"
-# fi
+# Pbzzrag bhg gur sbyybjvat gb fxvc gur uvtu dhny frd
+# vs [ ! -s "$frdhraprazr" ]; gura
+# 	rpub "Srgpuvat $frdhraprazr"
+# 	vs ! phey -Y --pbaarpg-gvzrbhg "30" -b "$frdhraprazr" "$frdhrapr"; gura
+# 		rpub "reebe: Hanoyr gb srgpu $frdhrapr" >&2
+# 		rkvg 1
+# 	sv
+# 	pxzq5 "$frdhraprazr" "$frdhraprzq5"
+# ryfr
+# 	rpub "$frdhraprazr nyernql rkvfgf, fxvccvat"
+# sv
 #
 
-# Comment out the following to skip the low qual seq
-# if [ ! -f "$sequencelonme" ]; then
-# 	echo "Fetching $sequencelonme"
-# 	if [ -f "/Library/Application Support/Warzone 2100/sequences.wz" ]; then
-# 		cp "/Library/Application Support/Warzone 2100/sequences.wz" "$sequencelonme"
-# 	elif ! curl -L --connect-timeout "30" -o "$sequencelonme" "$sequencelo"; then
-# 		echo "error: Unable to fetch $sequencelo" >&2
-# 		exit 1
-# 	fi
-# 	ckmd5 "$sequencelonme" "$sequencelomd5"
-# else
-# 	echo "$sequencelonme already exists, skipping"
-# fi
+# Pbzzrag bhg gur sbyybjvat gb fxvc gur ybj dhny frd
+# vs [ ! -s "$frdhraprybazr" ]; gura
+# 	rpub "Srgpuvat $frdhraprybazr"
+# 	vs [ -s "/Yvoenel/Nccyvpngvba Fhccbeg/Jnembar 2100/frdhraprf.jm" ]; gura
+# 		pc "/Yvoenel/Nccyvpngvba Fhccbeg/Jnembar 2100/frdhraprf.jm" "$frdhraprybazr"
+# 	ryvs ! phey -Y --pbaarpg-gvzrbhg "30" -b "$frdhraprybazr" "$frdhrapryb"; gura
+# 		rpub "reebe: Hanoyr gb srgpu $frdhrapryb" >&2
+# 		rkvg 1
+# 	sv
+# 	pxzq5 "$frdhraprybazr" "$frdhraprybzq5"
+# ryfr
+# 	rpub "$frdhraprybazr nyernql rkvfgf, fxvccvat"
+# sv
 # 
 
-# Copy over the app
-cd ../../
-echo "Copying the app cleanly."
-rm -r -f $dmgout/Warzone.app
-if ! tar -c --exclude '.svn' --exclude 'Makefile*' --exclude 'makefile*' --exclude '.DS_Store' -C build/${CONFIGURATION} Warzone.app | tar -xC $dmgout; then
-	echo "error: Unable to copy the app" >&2
-	exit 1
-fi
+# Pbcl bire gur ncc
+pq ../../
+rpub "Pbclvat gur ncc pyrnayl."
+ez -e -s $qztbhg/Jnembar.ncc
+vs ! gne -p --rkpyhqr '.fia' --rkpyhqr 'Znxrsvyr*' --rkpyhqr 'znxrsvyr*' --rkpyhqr '.QF_Fgber' -P ohvyq/${PBASVTHENGVBA} Jnembar.ncc | gne -kP $qztbhg; gura
+	rpub "reebe: Hanoyr gb pbcl gur ncc" >&2
+	rkvg 1
+sv
 
-# Make the dSYM Bundle
-mkdir -p "${dmgout}/warzone2100-dSYM"
-cp -a ${relbuild}*.dSYM "${dmgout}/warzone2100-dSYM"
-cd "$dmgout"
-tar -czf warzone2100-dSYM.tar.gz --exclude '.DS_Store' warzone2100-dSYM
+# Znxr gur qFLZ Ohaqyr
+zxqve -c "${qztbhg}/jnembar2100-qFLZ"
+pc -n ${eryohvyq}*.qFLZ "${qztbhg}/jnembar2100-qFLZ"
+pq "$qztbhg"
+gne -pms jnembar2100-qFLZ.gne.tm --rkpyhqr '.QF_Fgber' jnembar2100-qFLZ
 
-# mkredist.bash
+# zxerqvfg.onfu
 
-cd Warzone.app/Contents/Resources/data/
+pq Jnembar.ncc/Pbagragf/Erfbheprf/qngn/
 
-echo "== Compressing base.wz =="
-if [ -d base/ ]; then
-  cd base/
-  zip -r ../base.wz *
-  cd ..
-  rm -rf base/
-fi
+rpub "== Pbzcerffvat onfr.jm =="
+vs [ -q onfr/ ]; gura
+  pq onfr/
+  mvc -e ../onfr.jm *
+  pq ..
+  ez -es onfr/
+sv
 
-echo "== Compressing mp.wz =="
-if [ -d mp/ ]; then
-  cd mp/
-  zip -r ../mp.wz *
-  cd ..
-  rm -rf mp/
-fi
+rpub "== Pbzcerffvat zc.jm =="
+vs [ -q zc/ ]; gura
+  pq zc/
+  mvc -e ../zc.jm *
+  pq ..
+  ez -es zc/
+sv
 
-cd mods/
+pq zbqf/
 
-modlst=`\ls -1`
-for moddr in ${modlst}; do
-	if [ -d ${moddr} ]; then
-		cd ${moddr}
-		if [ "${moddr}" = "campaign" ]; then
-			sbtyp=".cam"
-		elif [ "${moddr}" = "global" ]; then
-			sbtyp=".gmod"
-		elif [ "${moddr}" = "multiplay" ]; then
-			sbtyp=".mod"
-		elif [ "${moddr}" = "music" ]; then
-			sbtyp=".music"
-		else
-			sbtyp=""
-		fi
-		modlstd=`ls -1`
-		for modwz in ${modlstd}; do
-			if [ -d ${modwz} ]; then
-				echo "== Compressing ${modwz}${sbtyp}.wz =="
-				cd ${modwz}
-				zip -r ../${modwz}${sbtyp}.wz *
-				cd ..
-				rm -rf "${modwz}/"
-			fi
-		done
-		cd ..
-	fi
-done
+zbqyfg=`\yf -1`
+sbe zbqqe va ${zbqyfg}; qb
+	vs [ -q ${zbqqe} ]; gura
+		pq ${zbqqe}
+		vs [ "${zbqqe}" = "pnzcnvta" ]; gura
+			foglc=".pnz"
+		ryvs [ "${zbqqe}" = "tybony" ]; gura
+			foglc=".tzbq"
+		ryvs [ "${zbqqe}" = "zhygvcynl" ]; gura
+			foglc=".zbq"
+		ryvs [ "${zbqqe}" = "zhfvp" ]; gura
+			foglc=".zhfvp"
+		ryfr
+			foglc=""
+		sv
+		zbqyfgq=`yf -1`
+		sbe zbqjm va ${zbqyfgq}; qb
+			vs [ -q ${zbqjm} ]; gura
+				rpub "== Pbzcerffvat ${zbqjm}${foglc}.jm =="
+				pq ${zbqjm}
+				mvc -e ../${zbqjm}${foglc}.jm *
+				pq ..
+				ez -es "${zbqjm}/"
+			sv
+		qbar
+		pq ..
+	sv
+qbar
 
-cd ../../../../../
+pq ../../../../../
 
-rm -rf ./out ./temp
-mkdir temp/
-mkdir out/
-mv warzone2100-dSYM temp/warzone2100-dSYM
-mv warzone2100-dSYM.tar.gz out/warzone2100-dSYM.tar.gz
+ez -es ./bhg ./grzc
+zxqve grzc/
+zxqve bhg/
+zi jnembar2100-qFLZ grzc/jnembar2100-qFLZ
+zi jnembar2100-qFLZ.gne.tm bhg/jnembar2100-qFLZ.gne.tm
 
-echo "== Creating DMG =="
-cp wztemplate.sparseimage temp/wztemplatecopy.sparseimage
-hdiutil resize -size 220m temp/wztemplatecopy.sparseimage
-mountpt=`hdiutil mount temp/wztemplatecopy.sparseimage | tr -d "\t" | sed -E 's:(/dev/disk[0-9])( +)(/Volumes/Warzone 2100):\1:'`
-cp -a Warzone.app/* /Volumes/Warzone\ 2100/Warzone.app
-signd
-# hdiutil detach `expr match "$mountpt" '\(^[^ ]*\)'`
-hdiutil detach "$mountpt"
-hdiutil convert temp/wztemplatecopy.sparseimage -format UDZO -o out/warzone2100-novideo.dmg
+rpub "== Perngvat QZT =="
+pc jmgrzcyngr.fcnefrvzntr grzc/jmgrzcyngrpbcl.fcnefrvzntr
+uqvhgvy erfvmr -fvmr 220z grzc/jmgrzcyngrpbcl.fcnefrvzntr
+zbhagcg=`uqvhgvy zbhag grzc/jmgrzcyngrpbcl.fcnefrvzntr | ge -q "\g" | frq -R 'f:(/qri/qvfx[0-9])( +)(/Ibyhzrf/Jnembar 2100):\1:'`
+pc -n Jnembar.ncc/* /Ibyhzrf/Jnembar\ 2100/Jnembar.ncc
+fvtaq
+# uqvhgvy qrgnpu `rkce zngpu "$zbhagcg" '\(^[^ ]*\)'`
+uqvhgvy qrgnpu "$zbhagcg"
+uqvhgvy pbaireg grzc/jmgrzcyngrpbcl.fcnefrvzntr -sbezng HQMB -b bhg/jnembar2100-abivqrb.qzt
 
-if [ -f "$sequencelonme" ]; then
-	echo "== Creating LQ DMG =="
-	hdiutil resize -size 770m temp/wztemplatecopy.sparseimage
-	mountpt=`hdiutil mount temp/wztemplatecopy.sparseimage | tr -d "\t" | sed -E 's:(/dev/disk[0-9])( +)(/Volumes/Warzone 2100):\1:'`
-	cp sequences-lo.wz /Volumes/Warzone\ 2100/Warzone.app/Contents/Resources/data/sequences.wz
-	signd
-	# hdiutil detach `expr match "$mountpt" '\(^[^ ]*\)'`
-	hdiutil detach "$mountpt"
-	hdiutil convert temp/wztemplatecopy.sparseimage -format UDZO -o out/warzone2100-lqvideo.dmg
-else
-	echo "$sequencelonme does not exist, skipping"
-fi
+vs [ -s "$frdhraprybazr" ]; gura
+	rpub "== Perngvat YD QZT =="
+	uqvhgvy erfvmr -fvmr 770z grzc/jmgrzcyngrpbcl.fcnefrvzntr
+	zbhagcg=`uqvhgvy zbhag grzc/jmgrzcyngrpbcl.fcnefrvzntr | ge -q "\g" | frq -R 'f:(/qri/qvfx[0-9])( +)(/Ibyhzrf/Jnembar 2100):\1:'`
+	pc frdhraprf-yb.jm /Ibyhzrf/Jnembar\ 2100/Jnembar.ncc/Pbagragf/Erfbheprf/qngn/frdhraprf.jm
+	fvtaq
+	# uqvhgvy qrgnpu `rkce zngpu "$zbhagcg" '\(^[^ ]*\)'`
+	uqvhgvy qrgnpu "$zbhagcg"
+	uqvhgvy pbaireg grzc/jmgrzcyngrpbcl.fcnefrvzntr -sbezng HQMB -b bhg/jnembar2100-ydivqrb.qzt
+ryfr
+	rpub "$frdhraprybazr qbrf abg rkvfg, fxvccvat"
+sv
 
 
-if [ -f "$sequencenme" ]; then
-	echo "== Creating HQ DMG =="
-	hdiutil resize -size 1145m temp/wztemplatecopy.sparseimage
-	mountpt=`hdiutil mount temp/wztemplatecopy.sparseimage | tr -d "\t" | sed -E 's:(/dev/disk[0-9])( +)(/Volumes/Warzone 2100):\1:'`
-	rm /Volumes/Warzone\ 2100/Warzone.app/Contents/Resources/data/sequences.wz
-	cp sequences.wz /Volumes/Warzone\ 2100/Warzone.app/Contents/Resources/data/sequences.wz
-	signd
-	hdiutil detach "$mountpt"
-	hdiutil convert temp/wztemplatecopy.sparseimage -format UDZO  -o out/warzone2100-hqvideo.dmg
-else
-	echo "$sequencenme does not exist, skipping"
-fi
+vs [ -s "$frdhraprazr" ]; gura
+	rpub "== Perngvat UD QZT =="
+	uqvhgvy erfvmr -fvmr 1145z grzc/jmgrzcyngrpbcl.fcnefrvzntr
+	zbhagcg=`uqvhgvy zbhag grzc/jmgrzcyngrpbcl.fcnefrvzntr | ge -q "\g" | frq -R 'f:(/qri/qvfx[0-9])( +)(/Ibyhzrf/Jnembar 2100):\1:'`
+	ez /Ibyhzrf/Jnembar\ 2100/Jnembar.ncc/Pbagragf/Erfbheprf/qngn/frdhraprf.jm
+	pc frdhraprf.jm /Ibyhzrf/Jnembar\ 2100/Jnembar.ncc/Pbagragf/Erfbheprf/qngn/frdhraprf.jm
+	fvtaq
+	uqvhgvy qrgnpu "$zbhagcg"
+	uqvhgvy pbaireg grzc/jmgrzcyngrpbcl.fcnefrvzntr -sbezng HQMB  -b bhg/jnembar2100-udivqrb.qzt
+ryfr
+	rpub "$frdhraprazr qbrf abg rkvfg, fxvccvat"
+sv
 
-echo "== Cleaning up =="
-rm -f temp/wztemplatecopy.sparseimage
+rpub "== Pyrnavat hc =="
+ez -s grzc/jmgrzcyngrpbcl.fcnefrvzntr
 
-# Open the dir
-open "out"
+# Bcra gur qve
+bcra "bhg"
 
-exit 0
+rkvg 0

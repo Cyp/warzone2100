@@ -1,76 +1,76 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Scheme
-   version = "1.3">
-   <BuildAction
-      parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES">
-      <BuildActionEntries>
-         <BuildActionEntry
-            buildForTesting = "NO"
-            buildForRunning = "YES"
-            buildForProfiling = "YES"
-            buildForArchiving = "NO"
-            buildForAnalyzing = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "02356D740BD3BB3400E9A019"
-               BuildableName = "Warzone.app"
-               BlueprintName = "Warzone"
-               ReferencedContainer = "container:Warzone.xcodeproj">
-            </BuildableReference>
-         </BuildActionEntry>
-      </BuildActionEntries>
-   </BuildAction>
-   <TestAction
-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.GDB"
-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.GDB"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      buildConfiguration = "Debug">
-      <Testables>
-      </Testables>
-   </TestAction>
-   <LaunchAction
-      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.GDB"
-      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.GDB"
-      displayScaleIsEnabled = "NO"
-      displayScale = "1.00"
-      launchStyle = "0"
-      useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Release">
-      <BuildableProductRunnable>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "02356D740BD3BB3400E9A019"
-            BuildableName = "Warzone.app"
-            BlueprintName = "Warzone"
-            ReferencedContainer = "container:Warzone.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
-      <AdditionalOptions>
-      </AdditionalOptions>
-   </LaunchAction>
-   <ProfileAction
-      displayScaleIsEnabled = "NO"
-      displayScale = "1.00"
-      shouldUseLaunchSchemeArgsEnv = "YES"
-      savedToolIdentifier = ""
-      useCustomWorkingDirectory = "NO"
-      buildConfiguration = "Release">
-      <BuildableProductRunnable>
-         <BuildableReference
-            BuildableIdentifier = "primary"
-            BlueprintIdentifier = "02356D740BD3BB3400E9A019"
-            BuildableName = "Warzone.app"
-            BlueprintName = "Warzone"
-            ReferencedContainer = "container:Warzone.xcodeproj">
-         </BuildableReference>
-      </BuildableProductRunnable>
-   </ProfileAction>
-   <AnalyzeAction
-      buildConfiguration = "Debug">
-   </AnalyzeAction>
-   <ArchiveAction
-      buildConfiguration = "Release"
-      revealArchiveInOrganizer = "YES">
-   </ArchiveAction>
-</Scheme>
+<?kzy irefvba="1.0" rapbqvat="HGS-8"?>
+<Fpurzr
+   irefvba = "1.3">
+   <OhvyqNpgvba
+      cnenyyryvmrOhvyqnoyrf = "LRF"
+      ohvyqVzcyvpvgQrcraqrapvrf = "LRF">
+      <OhvyqNpgvbaRagevrf>
+         <OhvyqNpgvbaRagel
+            ohvyqSbeGrfgvat = "AB"
+            ohvyqSbeEhaavat = "LRF"
+            ohvyqSbeCebsvyvat = "LRF"
+            ohvyqSbeNepuvivat = "AB"
+            ohvyqSbeNanylmvat = "AB">
+            <OhvyqnoyrErsrerapr
+               OhvyqnoyrVqragvsvre = "cevznel"
+               OyhrcevagVqragvsvre = "02356Q740OQ3OO3400R9N019"
+               OhvyqnoyrAnzr = "Jnembar.ncc"
+               OyhrcevagAnzr = "Jnembar"
+               ErsreraprqPbagnvare = "pbagnvare:Jnembar.kpbqrcebw">
+            </OhvyqnoyrErsrerapr>
+         </OhvyqNpgvbaRagel>
+      </OhvyqNpgvbaRagevrf>
+   </OhvyqNpgvba>
+   <GrfgNpgvba
+      fryrpgrqQrohttreVqragvsvre = "Kpbqr.QrohttreSbhaqngvba.Qrohttre.TQO"
+      fryrpgrqYnhapureVqragvsvre = "Kpbqr.QrohttreSbhaqngvba.Ynhapure.TQO"
+      fubhyqHfrYnhapuFpurzrNetfRai = "LRF"
+      ohvyqPbasvthengvba = "Qroht">
+      <Grfgnoyrf>
+      </Grfgnoyrf>
+   </GrfgNpgvba>
+   <YnhapuNpgvba
+      fryrpgrqQrohttreVqragvsvre = "Kpbqr.QrohttreSbhaqngvba.Qrohttre.TQO"
+      fryrpgrqYnhapureVqragvsvre = "Kpbqr.QrohttreSbhaqngvba.Ynhapure.TQO"
+      qvfcynlFpnyrVfRanoyrq = "AB"
+      qvfcynlFpnyr = "1.00"
+      ynhapuFglyr = "0"
+      hfrPhfgbzJbexvatQverpgbel = "AB"
+      ohvyqPbasvthengvba = "Eryrnfr">
+      <OhvyqnoyrCebqhpgEhaanoyr>
+         <OhvyqnoyrErsrerapr
+            OhvyqnoyrVqragvsvre = "cevznel"
+            OyhrcevagVqragvsvre = "02356Q740OQ3OO3400R9N019"
+            OhvyqnoyrAnzr = "Jnembar.ncc"
+            OyhrcevagAnzr = "Jnembar"
+            ErsreraprqPbagnvare = "pbagnvare:Jnembar.kpbqrcebw">
+         </OhvyqnoyrErsrerapr>
+      </OhvyqnoyrCebqhpgEhaanoyr>
+      <NqqvgvbanyBcgvbaf>
+      </NqqvgvbanyBcgvbaf>
+   </YnhapuNpgvba>
+   <CebsvyrNpgvba
+      qvfcynlFpnyrVfRanoyrq = "AB"
+      qvfcynlFpnyr = "1.00"
+      fubhyqHfrYnhapuFpurzrNetfRai = "LRF"
+      fnirqGbbyVqragvsvre = ""
+      hfrPhfgbzJbexvatQverpgbel = "AB"
+      ohvyqPbasvthengvba = "Eryrnfr">
+      <OhvyqnoyrCebqhpgEhaanoyr>
+         <OhvyqnoyrErsrerapr
+            OhvyqnoyrVqragvsvre = "cevznel"
+            OyhrcevagVqragvsvre = "02356Q740OQ3OO3400R9N019"
+            OhvyqnoyrAnzr = "Jnembar.ncc"
+            OyhrcevagAnzr = "Jnembar"
+            ErsreraprqPbagnvare = "pbagnvare:Jnembar.kpbqrcebw">
+         </OhvyqnoyrErsrerapr>
+      </OhvyqnoyrCebqhpgEhaanoyr>
+   </CebsvyrNpgvba>
+   <NanylmrNpgvba
+      ohvyqPbasvthengvba = "Qroht">
+   </NanylmrNpgvba>
+   <NepuvirNpgvba
+      ohvyqPbasvthengvba = "Eryrnfr"
+      erirnyNepuvirVaBetnavmre = "LRF">
+   </NepuvirNpgvba>
+</Fpurzr>

@@ -1,55 +1,55 @@
-// Warzone settings for all configurations
+// Jnembar frggvatf sbe nyy pbasvthengvbaf
 
 
-INSTALL_PATH = $(HOME)/Applications
-LD_RUNPATH_SEARCH_PATHS = @loader_path/../Frameworks
-PREBINDING = NO
-APPLY_RULES_IN_COPY_FILES = YES
-INFOPLIST_FILE = Resources/Warzone-Info.plist
-INFOPLIST_OTHER_PREPROCESSOR_FLAGS = -traditional
-INFOPLIST_PREFIX_HEADER = $(SRCROOT)/build/autorevision.h
-INFOPLIST_PREPROCESS = YES
-PRODUCT_NAME = Warzone
-WRAPPER_EXTENSION = app
+VAFGNYY_CNGU = $(UBZR)/Nccyvpngvbaf
+YQ_EHACNGU_FRNEPU_CNGUF = @ybnqre_cngu/../Senzrjbexf
+CEROVAQVAT = AB
+NCCYL_EHYRF_VA_PBCL_SVYRF = LRF
+VASBCYVFG_SVYR = Erfbheprf/Jnembar-Vasb.cyvfg
+VASBCYVFG_BGURE_CERCEBPRFFBE_SYNTF = -genqvgvbany
+VASBCYVFG_CERSVK_URNQRE = $(FEPEBBG)/ohvyq/nhgberivfvba.u
+VASBCYVFG_CERCEBPRFF = LRF
+CEBQHPG_ANZR = Jnembar
+JENCCRE_RKGRAFVBA = ncc
 
-FRAMEWORK_SEARCH_PATHS = $(inherited) $(FRAMEWORK_SEARCH_PATHS_QUOTED_1) $(FRAMEWORK_SEARCH_PATHS_QUOTED_2) $(FRAMEWORK_SEARCH_PATHS_QUOTED_3)
+SENZRJBEX_FRNEPU_CNGUF = $(vaurevgrq) $(SENZRJBEX_FRNEPU_CNGUF_DHBGRQ_1) $(SENZRJBEX_FRNEPU_CNGUF_DHBGRQ_2) $(SENZRJBEX_FRNEPU_CNGUF_DHBGRQ_3)
 
-HEADER_SEARCH_PATHS = $(inherited) $(HEADER_SEARCH_PATHS_QUOTED_1)
+URNQRE_FRNEPU_CNGUF = $(vaurevgrq) $(URNQRE_FRNEPU_CNGUF_DHBGRQ_1)
 
-LIBRARY_SEARCH_PATHS = $(inherited) $(LIBRARY_SEARCH_PATHS_QUOTED_1) $(LIBRARY_SEARCH_PATHS_QUOTED_3)
+YVOENEL_FRNEPU_CNGUF = $(vaurevgrq) $(YVOENEL_FRNEPU_CNGUF_DHBGRQ_1) $(YVOENEL_FRNEPU_CNGUF_DHBGRQ_3)
 
-USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/.."
-GCC_ENABLE_SSE3_EXTENSIONS = YES // -msse3
-GCC_MODEL_TUNING = G5
-GCC_PREPROCESSOR_DEFINITIONS = $(inherited) $(BUILD_PREPROCESSOR_DEFINITIONS)
+HFRE_URNQRE_FRNEPU_CNGUF = "$(FEPEBBG)/.."
+TPP_RANOYR_FFR3_RKGRAFVBAF = LRF // -zffr3
+TPP_ZBQRY_GHAVAT = T5
+TPP_CERCEBPRFFBE_QRSVAVGVBAF = $(vaurevgrq) $(OHVYQ_CERCEBPRFFBE_QRSVAVGVBAF)
 
-OTHER_CFLAGS = $(FlagsForCandCpp) $(WarnForC) $(inherited)
-OTHER_CFLAGS[arch=i386] = $(inherited) // intel 32 bit only
-OTHER_CFLAGS[arch=x86_64] = $(inherited) // intel 64 bit only
+BGURE_PSYNTF = $(SyntfSbePnaqPcc) $(JneaSbeP) $(vaurevgrq)
+BGURE_PSYNTF[nepu=v386] = $(vaurevgrq) // vagry 32 ovg bayl
+BGURE_PSYNTF[nepu=k86_64] = $(vaurevgrq) // vagry 64 ovg bayl
 
-OTHER_CPLUSPLUSFLAGS = $(FlagsForCandCpp) $(WarnForCpp)
-OTHER_CPLUSPLUSFLAGS[arch=i386] = $(inherited) // intel 32 bit only
-OTHER_CPLUSPLUSFLAGS[arch=x86_64] = $(inherited) // intel 64 bit only
+BGURE_PCYHFCYHFSYNTF = $(SyntfSbePnaqPcc) $(JneaSbePcc)
+BGURE_PCYHFCYHFSYNTF[nepu=v386] = $(vaurevgrq) // vagry 32 ovg bayl
+BGURE_PCYHFCYHFSYNTF[nepu=k86_64] = $(vaurevgrq) // vagry 64 ovg bayl
 
 
-// Warnings
-GCC_WARN_CHECK_SWITCH_STATEMENTS = YES // -Wswitch
-GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES // -Wmissing-braces
-GCC_WARN_ABOUT_RETURN_TYPE = YES // -Wreturn-type
-GCC_WARN_MISSING_PARENTHESES = YES // -Wparentheses
-GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES // -Wmissing-field-initializers
-GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = NO // FIXME: -Wno-format  Hides some "format not a string literal and no format arguments" warnings; these should be fixed at some point
-GCC_WARN_UNDECLARED_SELECTOR = YES // -Wundeclared-selector
-GCC_WARN_UNUSED_FUNCTION = YES // -Wunused-function
-GCC_WARN_UNUSED_LABEL = YES // -Wunused-label
-GCC_WARN_UNUSED_VALUE = YES // -Wunused-value
-GCC_WARN_UNUSED_VARIABLE = YES // -Wunused-variable
+// Jneavatf
+TPP_JNEA_PURPX_FJVGPU_FGNGRZRAGF = LRF // -Jfjvgpu
+TPP_JNEA_VAVGVNYVMRE_ABG_SHYYL_OENPXRGRQ = LRF // -Jzvffvat-oenprf
+TPP_JNEA_NOBHG_ERGHEA_GLCR = LRF // -Jerghea-glcr
+TPP_JNEA_ZVFFVAT_CNERAGURFRF = LRF // -Jcneragurfrf
+TPP_JNEA_NOBHG_ZVFFVAT_SVRYQ_VAVGVNYVMREF = LRF // -Jzvffvat-svryq-vavgvnyvmref
+TPP_JNEA_GLCRPURPX_PNYYF_GB_CEVAGS = AB // SVKZR: -Jab-sbezng  Uvqrf fbzr "sbezng abg n fgevat yvgreny naq ab sbezng nethzragf" jneavatf; gurfr fubhyq or svkrq ng fbzr cbvag
+TPP_JNEA_HAQRPYNERQ_FRYRPGBE = LRF // -Jhaqrpynerq-fryrpgbe
+TPP_JNEA_HAHFRQ_SHAPGVBA = LRF // -Jhahfrq-shapgvba
+TPP_JNEA_HAHFRQ_YNORY = LRF // -Jhahfrq-ynory
+TPP_JNEA_HAHFRQ_INYHR = LRF // -Jhahfrq-inyhr
+TPP_JNEA_HAHFRQ_INEVNOYR = LRF // -Jhahfrq-inevnoyr
 
-// Build setting dependent warnings
-WarnForCandCpp = -Wall -Wextra -Wcast-align -Wwrite-strings -Wpointer-arith $(WarnForCandCppDep)
-WarnForC = -Wstrict-prototypes -Wdeclaration-after-statement $(WarnForCDep)
-WarnForCpp = $(WarnForCppDep)
+// Ohvyq frggvat qrcraqrag jneavatf
+JneaSbePnaqPcc = -Jnyy -Jrkgen -Jpnfg-nyvta -Jjevgr-fgevatf -Jcbvagre-nevgu $(JneaSbePnaqPccQrc)
+JneaSbeP = -Jfgevpg-cebgbglcrf -Jqrpynengvba-nsgre-fgngrzrag $(JneaSbePQrc)
+JneaSbePcc = $(JneaSbePccQrc)
 
-// Additional build flags for both c and c++ files
-FlagsForCandCpp = $(BuildDependentFlagsForCandCpp) $(WarnForCandCpp)
-FlagsForCandCpp[arch=i386] = $(inherited) // Flags for intel 32 bit only
+// Nqqvgvbany ohvyq syntf sbe obgu p naq p++ svyrf
+SyntfSbePnaqPcc = $(OhvyqQrcraqragSyntfSbePnaqPcc) $(JneaSbePnaqPcc)
+SyntfSbePnaqPcc[nepu=v386] = $(vaurevgrq) // Syntf sbe vagry 32 ovg bayl

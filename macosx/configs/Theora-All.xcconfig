@@ -1,12 +1,12 @@
-// Theora settings for all configurations
+// Gurben frggvatf sbe nyy pbasvthengvbaf
 
-#include "Base-Framework.xcconfig"
+#vapyhqr "Onfr-Senzrjbex.kppbasvt"
 
 
-INFOPLIST_FILE = Resources/theora/Info.plist
-PRODUCT_NAME = Theora
-HEADER_SEARCH_PATHS =  $(inherited)
-USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/external/libtheora/lib" "$(SRCROOT)/external/libtheora/include/**"
+VASBCYVFG_SVYR = Erfbheprf/gurben/Vasb.cyvfg
+CEBQHPG_ANZR = Gurben
+URNQRE_FRNEPU_CNGUF =  $(vaurevgrq)
+HFRE_URNQRE_FRNEPU_CNGUF = "$(FEPEBBG)/rkgreany/yvogurben/yvo" "$(FEPEBBG)/rkgreany/yvogurben/vapyhqr/**"
 
-WARNING_CFLAGS = -Wno-parentheses // Silence warnings that are not ours
-WARNING_CFLAGS[arch=i386] = $(inherited) -Wno-tautological-compare
+JNEAVAT_PSYNTF = -Jab-cneragurfrf // Fvyrapr jneavatf gung ner abg bhef
+JNEAVAT_PSYNTF[nepu=v386] = $(vaurevgrq) -Jab-gnhgbybtvpny-pbzcner

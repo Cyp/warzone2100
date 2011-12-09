@@ -1,25 +1,25 @@
-The minimum requirements to build Warzone are System 10.6 and Xcode 3.2.x. and the Qt 4.7 moc.
+Gur zvavzhz erdhverzragf gb ohvyq Jnembar ner Flfgrz 10.6 naq Kpbqr 3.2.k. naq gur Dg 4.7 zbp.
 
 
-If you do not have Xcode 3.2.x you can get it for free at Apple's website.
-http://developer.apple.com/technology/xcode.html
-You will need a free ADC Membership to download Xcode.
+Vs lbh qb abg unir Kpbqr 3.2.k lbh pna trg vg sbe serr ng Nccyr'f jrofvgr.
+uggc://qrirybcre.nccyr.pbz/grpuabybtl/kpbqr.ugzy
+Lbh jvyy arrq n serr NQP Zrzorefuvc gb qbjaybnq Kpbqr.
 
-If you do not the Qt 4.7 moc you can get it at the Qt website.
-http://qt.nokia.com/downloads/qt-for-open-source-cpp-development-on-mac-os-x
+Vs lbh qb abg gur Dg 4.7 zbp lbh pna trg vg ng gur Dg jrofvgr.
+uggc://dg.abxvn.pbz/qbjaybnqf/dg-sbe-bcra-fbhepr-pcc-qrirybczrag-ba-znp-bf-k
 
-This directory contains support files for the Mac OS X port of Warzone 2100.
-Since April, 2007, The Mac OS X port has been built using an Xcode project
-that automatically downloads and builds all necessary external libraries.
-The Mac OS X port produces a 32 bit universal binary  and requires Mac OS X
-10.5 to run.
+Guvf qverpgbel pbagnvaf fhccbeg svyrf sbe gur Znp BF K cbeg bs Jnembar 2100.
+Fvapr Ncevy, 2007, Gur Znp BF K cbeg unf orra ohvyg hfvat na Kpbqr cebwrpg
+gung nhgbzngvpnyyl qbjaybnqf naq ohvyqf nyy arprffnel rkgreany yvoenevrf.
+Gur Znp BF K cbeg cebqhprf n 32 ovg havirefny ovanel  naq erdhverf Znp BF K
+10.5 gb eha.
 
-To build the game, just run the following command:
-  xcodebuild -project Warzone.xcodeproj -target Warzone -configuration Release
+Gb ohvyq gur tnzr, whfg eha gur sbyybjvat pbzznaq:
+  kpbqrohvyq -cebwrpg Jnembar.kpbqrcebw -gnetrg Jnembar -pbasvthengvba Eryrnfr
 
-There are two build configurations available.  'Release' is compiled
-normally, while 'Debug' sets the DEBUG preprocessor flag and automatically
-sets the game's debugging options to the equivalent of --debug all when
-launched, unless overwritten with a --debug command-line option.  The
-debugging output can be viewed with Console.app.
+Gurer ner gjb ohvyq pbasvthengvbaf ninvynoyr.  'Eryrnfr' vf pbzcvyrq
+abeznyyl, juvyr 'Qroht' frgf gur QROHT cercebprffbe synt naq nhgbzngvpnyyl
+frgf gur tnzr'f qrohttvat bcgvbaf gb gur rdhvinyrag bs --qroht nyy jura
+ynhapurq, hayrff birejevggra jvgu n --qroht pbzznaq-yvar bcgvba.  Gur
+qrohttvat bhgchg pna or ivrjrq jvgu Pbafbyr.ncc.
 

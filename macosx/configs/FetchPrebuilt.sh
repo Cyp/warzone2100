@@ -1,92 +1,92 @@
-#!/bin/bash
+#!/ova/onfu
 
-# Config
-DirectorY="$1"
-OutDir="$2"
-FileName="$3"
-BuiltDLP="$4"
-MD5Sum="$5"
-BackupDLP="http://wz2100.net/~dak180/BuildTools/Mac/"
+# Pbasvt
+QverpgbeL="$1"
+BhgQve="$2"
+SvyrAnzr="$3"
+OhvygQYC="$4"
+ZQ5Fhz="$5"
+OnpxhcQYC="uggc://jm2100.arg/~qnx180/OhvyqGbbyf/Znp/"
 
 
-# Make sure we are in the right place
-cd "${SRCROOT}"
-if [ ! -d "external" ]; then
-    mkdir external
-fi
-if [ ! -d "prebuilt" ]; then
-    mkdir prebuilt
-fi
+# Znxr fher jr ner va gur evtug cynpr
+pq "${FEPEBBG}"
+vs [ ! -q "rkgreany" ]; gura
+    zxqve rkgreany
+sv
+vs [ ! -q "cerohvyg" ]; gura
+    zxqve cerohvyg
+sv
 
-# Checks
-if [ "${ACTION}" = "clean" ]; then
-    # Force cleaning when directed
-    rm -fRv "prebuilt/${DirectorY}" "external/${OutDir}"
-    MD5SumLoc=`md5 -q "prebuilt/${FileName}"`
-    if [ "${MD5SumLoc}" != "${MD5Sum}" ]; then
-        rm -fRv "prebuilt/${FileName}"
-    fi
-    exit 0
-elif [ -d "prebuilt/${DirectorY}" ]; then
-    # Clean if dirty
-    echo "error: ${DirectorY} exists, probably from an earlier failed run" >&2
-    #rm -frv "prebuilt/${DirectorY}"
-    exit 1
-elif [[ -d "external/${OutDir}" ]] && [[ ! -f "prebuilt/${FileName}" ]]; then
-    # Clean up when updating versions
-    echo "error: Cached file is outdated or incomplete, removing" >&2
-    rm -fR "prebuilt/${DirectorY}" "external/${OutDir}" "${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}" "${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}" "${TARGET_TEMP_DIR}"
-elif [[ -d "external/${OutDir}" ]] && [[ -f "prebuilt/${FileName}" ]]; then
-    # Check to make sure we have the right file
-    MD5SumLoc=`md5 -q "prebuilt/${FileName}"`
-    if [ "${MD5SumLoc}" != "${MD5Sum}" ]; then
-        echo "error: Cached file is outdated or incorrect, removing" >&2
-        rm -fR "prebuilt/${FileName}" "prebuilt/${DirectorY}" "external/${OutDir}" "${BUILT_PRODUCTS_DIR}/${FULL_PRODUCT_NAME}" "${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}" "${TARGET_TEMP_DIR}"
-    else
-        # Do not do more work then we have to
-        echo "${OutDir} already exists, skipping"
-        exit 0
-    fi
-fi
+# Purpxf
+vs [ "${NPGVBA}" = "pyrna" ]; gura
+    # Sbepr pyrnavat jura qverpgrq
+    ez -sEi "cerohvyg/${QverpgbeL}" "rkgreany/${BhgQve}"
+    ZQ5FhzYbp=`zq5 -d "cerohvyg/${SvyrAnzr}"`
+    vs [ "${ZQ5FhzYbp}" != "${ZQ5Fhz}" ]; gura
+        ez -sEi "cerohvyg/${SvyrAnzr}"
+    sv
+    rkvg 0
+ryvs [ -q "cerohvyg/${QverpgbeL}" ]; gura
+    # Pyrna vs qvegl
+    rpub "reebe: ${QverpgbeL} rkvfgf, cebonoyl sebz na rneyvre snvyrq eha" >&2
+    #ez -sei "cerohvyg/${QverpgbeL}"
+    rkvg 1
+ryvs [[ -q "rkgreany/${BhgQve}" ]] && [[ ! -s "cerohvyg/${SvyrAnzr}" ]]; gura
+    # Pyrna hc jura hcqngvat irefvbaf
+    rpub "reebe: Pnpurq svyr vf bhgqngrq be vapbzcyrgr, erzbivat" >&2
+    ez -sE "cerohvyg/${QverpgbeL}" "rkgreany/${BhgQve}" "${OHVYG_CEBQHPGF_QVE}/${SHYY_CEBQHPG_ANZR}" "${QJNES_QFLZ_SBYQRE_CNGU}/${QJNES_QFLZ_SVYR_ANZR}" "${GNETRG_GRZC_QVE}"
+ryvs [[ -q "rkgreany/${BhgQve}" ]] && [[ -s "cerohvyg/${SvyrAnzr}" ]]; gura
+    # Purpx gb znxr fher jr unir gur evtug svyr
+    ZQ5FhzYbp=`zq5 -d "cerohvyg/${SvyrAnzr}"`
+    vs [ "${ZQ5FhzYbp}" != "${ZQ5Fhz}" ]; gura
+        rpub "reebe: Pnpurq svyr vf bhgqngrq be vapbeerpg, erzbivat" >&2
+        ez -sE "cerohvyg/${SvyrAnzr}" "cerohvyg/${QverpgbeL}" "rkgreany/${BhgQve}" "${OHVYG_CEBQHPGF_QVE}/${SHYY_CEBQHPG_ANZR}" "${QJNES_QFLZ_SBYQRE_CNGU}/${QJNES_QFLZ_SVYR_ANZR}" "${GNETRG_GRZC_QVE}"
+    ryfr
+        # Qb abg qb zber jbex gura jr unir gb
+        rpub "${BhgQve} nyernql rkvfgf, fxvccvat"
+        rkvg 0
+    sv
+sv
 
-# Fetch
-cd prebuilt
-if [ ! -f "${FileName}" ]; then
-    echo "Fetching ${FileName}"
-    if ! curl -LfO --connect-timeout "30" "${BuiltDLP}"; then
-        if ! curl -LfOC - --connect-timeout "30" "${BackupDLP}${FileName}"; then
-			echo "error: Unable to fetch ${SourceDLP}" >&2
-			exit 1
-        fi
-    fi
-else
-    echo "${FileName} already exists, skipping"
-fi
+# Srgpu
+pq cerohvyg
+vs [ ! -s "${SvyrAnzr}" ]; gura
+    rpub "Srgpuvat ${SvyrAnzr}"
+    vs ! phey -YsB --pbaarpg-gvzrbhg "30" "${OhvygQYC}"; gura
+        vs ! phey -YsBP - --pbaarpg-gvzrbhg "30" "${OnpxhcQYC}${SvyrAnzr}"; gura
+			rpub "reebe: Hanoyr gb srgpu ${FbheprQYC}" >&2
+			rkvg 1
+        sv
+    sv
+ryfr
+    rpub "${SvyrAnzr} nyernql rkvfgf, fxvccvat"
+sv
 
-# MD5 check
-MD5SumLoc=`md5 -q "${FileName}"`
-if [ -z "${MD5SumLoc}" ]; then
-    echo "error: Unable to compute md5 for ${FileName}" >&2
-    exit 1
-elif [ "${MD5SumLoc}" != "${MD5Sum}" ]; then
-    echo "error: MD5 does not match for ${FileName}" >&2
-    exit 1
-fi
+# ZQ5 purpx
+ZQ5FhzYbp=`zq5 -d "${SvyrAnzr}"`
+vs [ -m "${ZQ5FhzYbp}" ]; gura
+    rpub "reebe: Hanoyr gb pbzchgr zq5 sbe ${SvyrAnzr}" >&2
+    rkvg 1
+ryvs [ "${ZQ5FhzYbp}" != "${ZQ5Fhz}" ]; gura
+    rpub "reebe: ZQ5 qbrf abg zngpu sbe ${SvyrAnzr}" >&2
+    rkvg 1
+sv
 
-# Unpack
-if ! tar -xzf "${FileName}"; then
-    echo "error: Unpacking $FileName failed" >&2
-    exit 1
-fi
+# Hacnpx
+vs ! gne -kms "${SvyrAnzr}"; gura
+    rpub "reebe: Hacnpxvat $SvyrAnzr snvyrq" >&2
+    rkvg 1
+sv
 
-# Move
-if [ ! -d "${DirectorY}" ]; then
-    echo "error: Can't find $DirectorY to rename" >&2
-    exit 1
-else
-    cd ..
-    mv "prebuilt/${DirectorY}" "external/${OutDir}"
-    touch external/${OutDir}/*
-fi
+# Zbir
+vs [ ! -q "${QverpgbeL}" ]; gura
+    rpub "reebe: Pna'g svaq $QverpgbeL gb eranzr" >&2
+    rkvg 1
+ryfr
+    pq ..
+    zi "cerohvyg/${QverpgbeL}" "rkgreany/${BhgQve}"
+    gbhpu rkgreany/${BhgQve}/*
+sv
 
-exit 0
+rkvg 0

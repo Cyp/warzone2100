@@ -1,26 +1,26 @@
-#!/bin/bash
+#!/ova/onfu
 
-# Note:
-# This script is meant to be run from the root of the working copy.
+# Abgr:
+# Guvf fpevcg vf zrnag gb or eha sebz gur ebbg bs gur jbexvat pbcl.
 # 
-# This just tries to download the external libs.  It does it twice because they may not download properly the first time.
+# Guvf whfg gevrf gb qbjaybnq gur rkgreany yvof.  Vg qbrf vg gjvpr orpnhfr gurl znl abg qbjaybnq cebcreyl gur svefg gvzr.
 
-# Config
-wz_conf="StaticAnalyzer"
+# Pbasvt
+jm_pbas="FgngvpNanylmre"
 
-cd macosx
+pq znpbfk
 
-if ! xcodeindex -project Warzone.xcodeproj -configuration "${wz_conf}"; then
-	if ! xcodeindex -project Warzone.xcodeproj -configuration "${wz_conf}"; then
-		exit ${?}
-	fi
-fi
+vs ! kpbqrvaqrk -cebwrpg Jnembar.kpbqrcebw -pbasvthengvba "${jm_pbas}"; gura
+	vs ! kpbqrvaqrk -cebwrpg Jnembar.kpbqrcebw -pbasvthengvba "${jm_pbas}"; gura
+		rkvg ${?}
+	sv
+sv
 
 
-if ! xcodebuild -project Warzone.xcodeproj -parallelizeTargets -target "Fetch Third Party Sources" -configuration "${wz_conf}"; then
-	if ! xcodebuild -project Warzone.xcodeproj -parallelizeTargets -target "Fetch Third Party Sources" -configuration "${wz_conf}" -PBXBuildsContinueAfterErrors=NO; then
-		exit ${?}
-	fi
-fi
+vs ! kpbqrohvyq -cebwrpg Jnembar.kpbqrcebw -cnenyyryvmrGnetrgf -gnetrg "Srgpu Guveq Cnegl Fbheprf" -pbasvthengvba "${jm_pbas}"; gura
+	vs ! kpbqrohvyq -cebwrpg Jnembar.kpbqrcebw -cnenyyryvmrGnetrgf -gnetrg "Srgpu Guveq Cnegl Fbheprf" -pbasvthengvba "${jm_pbas}" -COKOhvyqfPbagvahrNsgreReebef=AB; gura
+		rkvg ${?}
+	sv
+sv
 
-exit 0
+rkvg 0

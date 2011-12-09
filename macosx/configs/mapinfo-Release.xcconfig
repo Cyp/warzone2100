@@ -1,14 +1,14 @@
-// mapinfo settings for Release configuration
+// zncvasb frggvatf sbe Eryrnfr pbasvthengvba
 
-#include "mapinfo-All.xcconfig"
+#vapyhqr "zncvasb-Nyy.kppbasvt"
 
 
-GCC_OPTIMIZATION_LEVEL = 2
-BUILD_PREPROCESSOR_DEFINITIONS = $(inherited)
+TPP_BCGVZVMNGVBA_YRIRY = 2
+OHVYQ_CERCEBPRFFBE_QRSVAVGVBAF = $(vaurevgrq)
 
-BuildDependentFlagsForCandCpp = -fstack-protector
+OhvyqQrcraqragSyntfSbePnaqPcc = -sfgnpx-cebgrpgbe
 
-// Build setting dependent warnings
-WarnForCandCppDep = -Wno-unused-parameter -Wno-format-security -Wno-sign-compare
-WarnForCDep = 
-WarnForCppDep = // -Wno-enum-compare // not currently supported by compiler
+// Ohvyq frggvat qrcraqrag jneavatf
+JneaSbePnaqPccQrc = -Jab-hahfrq-cnenzrgre -Jab-sbezng-frphevgl -Jab-fvta-pbzcner
+JneaSbePQrc = 
+JneaSbePccQrc = // -Jab-rahz-pbzcner // abg pheeragyl fhccbegrq ol pbzcvyre

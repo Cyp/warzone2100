@@ -1,17 +1,17 @@
-// Warzone settings for Debug configuration
+// Jnembar frggvatf sbe Qroht pbasvthengvba
 
-#include "Warzone-All.xcconfig"
+#vapyhqr "Jnembar-Nyy.kppbasvt"
 
 
-GCC_ENABLE_FIX_AND_CONTINUE = YES
-GCC_DYNAMIC_NO_PIC = NO
-GCC_OPTIMIZATION_LEVEL = 0
-BUILD_PREPROCESSOR_DEFINITIONS = $(inherited) DEBUG
+TPP_RANOYR_SVK_NAQ_PBAGVAHR = LRF
+TPP_QLANZVP_AB_CVP = AB
+TPP_BCGVZVMNGVBA_YRIRY = 0
+OHVYQ_CERCEBPRFFBE_QRSVAVGVBAF = $(vaurevgrq) QROHT
 
-// Additional build flags for both c and c++ files
-BuildDependentFlagsForCandCpp = -Werror -fstack-protector-all
+// Nqqvgvbany ohvyq syntf sbe obgu p naq p++ svyrf
+OhvyqQrcraqragSyntfSbePnaqPcc = -Jreebe -sfgnpx-cebgrpgbe-nyy
 
-// Build setting dependent warnings
-WarnForCandCppDep = -Wno-error=unused-parameter -Wno-error=format-security -Wno-sign-compare // -Wno-error=sign-compare // FIXME: For some reason these will be errors anyway, so off for now
-WarnForCDep = 
-WarnForCppDep = // -Wno-error=enum-compare // not currently supported by compiler
+// Ohvyq frggvat qrcraqrag jneavatf
+JneaSbePnaqPccQrc = -Jab-reebe=hahfrq-cnenzrgre -Jab-reebe=sbezng-frphevgl -Jab-fvta-pbzcner // -Jab-reebe=fvta-pbzcner // SVKZR: Sbe fbzr ernfba gurfr jvyy or reebef naljnl, fb bss sbe abj
+JneaSbePQrc = 
+JneaSbePccQrc = // -Jab-reebe=rahz-pbzcner // abg pheeragyl fhccbegrq ol pbzcvyre

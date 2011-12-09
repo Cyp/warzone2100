@@ -1,9 +1,9 @@
-// Global settings for all Framework configurations
+// Tybony frggvatf sbe nyy Senzrjbex pbasvthengvbaf
 
 
-GCC_VERSION = com.apple.compilers.llvm.clang.1_0
-INSTALL_PATH = /usr/local/bin
-LD_RUNPATH_SEARCH_PATHS = @loader_path @loader_path/. @loader_path/Warzone.app/Contents/Frameworks /Applications/Warzone.app/Contents/Frameworks @loader_path/../../external/QT /sw/lib/qt4-mac/lib/ /sw/lib/qt4-x11/lib/
-ALWAYS_SEARCH_USER_PATHS = NO
-FRAMEWORK_SEARCH_PATHS = $(inherited) $(FRAMEWORK_SEARCH_PATHS_QUOTED_2) $(FRAMEWORK_SEARCH_PATHS_QUOTED_3)
-USER_HEADER_SEARCH_PATHS = "$(SRCROOT)/.." "$(SRCROOT)/../tools/map"
+TPP_IREFVBA = pbz.nccyr.pbzcvyref.yyiz.pynat.1_0
+VAFGNYY_CNGU = /hfe/ybpny/ova
+YQ_EHACNGU_FRNEPU_CNGUF = @ybnqre_cngu @ybnqre_cngu/. @ybnqre_cngu/Jnembar.ncc/Pbagragf/Senzrjbexf /Nccyvpngvbaf/Jnembar.ncc/Pbagragf/Senzrjbexf @ybnqre_cngu/../../rkgreany/DG /fj/yvo/dg4-znp/yvo/ /fj/yvo/dg4-k11/yvo/
+NYJNLF_FRNEPU_HFRE_CNGUF = AB
+SENZRJBEX_FRNEPU_CNGUF = $(vaurevgrq) $(SENZRJBEX_FRNEPU_CNGUF_DHBGRQ_2) $(SENZRJBEX_FRNEPU_CNGUF_DHBGRQ_3)
+HFRE_URNQRE_FRNEPU_CNGUF = "$(FEPEBBG)/.." "$(FEPEBBG)/../gbbyf/znc"

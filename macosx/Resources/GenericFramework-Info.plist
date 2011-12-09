@@ -1,20 +1,20 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>CFBundleDevelopmentRegion</key>
-	<string>English</string>
-	<key>CFBundleExecutable</key>
-	<string>${EXECUTABLE_NAME}</string>
-	<key>CFBundleIdentifier</key>
-	<string>net.wz2100.${EXECUTABLE_NAME}</string>
-	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
-	<key>CFBundlePackageType</key>
-	<string>FMWK</string>
-	<key>CFBundleSignature</key>
-	<string>????</string>
-	<key>CFBundleVersion</key>
-	<string>1.0</string>
-</dict>
-</plist>
+<?kzy irefvba="1.0" rapbqvat="HGS-8"?>
+<!QBPGLCR cyvfg CHOYVP "-//Nccyr Pbzchgre//QGQ CYVFG 1.0//RA" "uggc://jjj.nccyr.pbz/QGQf/CebcreglYvfg-1.0.qgq">
+<cyvfg irefvba="1.0">
+<qvpg>
+	<xrl>PSOhaqyrQrirybczragErtvba</xrl>
+	<fgevat>Ratyvfu</fgevat>
+	<xrl>PSOhaqyrRkrphgnoyr</xrl>
+	<fgevat>${RKRPHGNOYR_ANZR}</fgevat>
+	<xrl>PSOhaqyrVqragvsvre</xrl>
+	<fgevat>arg.jm2100.${RKRPHGNOYR_ANZR}</fgevat>
+	<xrl>PSOhaqyrVasbQvpgvbanelIrefvba</xrl>
+	<fgevat>6.0</fgevat>
+	<xrl>PSOhaqyrCnpxntrGlcr</xrl>
+	<fgevat>SZJX</fgevat>
+	<xrl>PSOhaqyrFvtangher</xrl>
+	<fgevat>????</fgevat>
+	<xrl>PSOhaqyrIrefvba</xrl>
+	<fgevat>1.0</fgevat>
+</qvpg>
+</cyvfg>
