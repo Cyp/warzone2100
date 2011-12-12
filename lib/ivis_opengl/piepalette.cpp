@@ -58,6 +58,46 @@ void pal_ShutDown(void)
 	// placeholder
 }
 
+	PIELIGHT *tcolours[16] = {
+		&WZCOL_TEAM1,
+		&WZCOL_TEAM2,
+		&WZCOL_TEAM3,
+		&WZCOL_TEAM4,
+		&WZCOL_TEAM5,
+		&WZCOL_TEAM6,
+		&WZCOL_TEAM7,
+		&WZCOL_TEAM8,
+		&WZCOL_TEAM9,
+		&WZCOL_TEAM10,
+		&WZCOL_TEAM11,
+		&WZCOL_TEAM12,
+		&WZCOL_TEAM13,
+		&WZCOL_TEAM14,
+		&WZCOL_TEAM15,
+		&WZCOL_TEAM16,
+	};
+void pal_tweakColour(int team, int n, int delta)
+{
+	if (delta == 0)
+		return;
+
+	int val = tcolours[team]->vector[n];
+	val = clip(val + delta, 0, 255);
+	tcolours[team]->vector[n] = val;
+
+	debug(LOG_WARNING, "WZCOL_TEAM%d = %02x,%02x,%02x,%02x", team + 1, (uint8_t)tcolours[team]->vector[0], (uint8_t)tcolours[team]->vector[1], (uint8_t)tcolours[team]->vector[2], (uint8_t)tcolours[team]->vector[3]);
+}
+
+void pal_saveTweakedColour()
+{
+	FILE *f = fopen("newPalette.txt", "wb");
+	for (unsigned team = 0; team < 16; ++team)
+	{
+		fprintf(f, "%02x,%02x,%02x,%02x\t// team %d - suffusion of yellow\n", (uint8_t)tcolours[team]->vector[0], (uint8_t)tcolours[team]->vector[1], (uint8_t)tcolours[team]->vector[2], (uint8_t)tcolours[team]->vector[3], team + 1);
+	}
+	fclose(f);
+}
+
 PIELIGHT pal_GetTeamColour(int team)
 {
 	PIELIGHT tcolour;

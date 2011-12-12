@@ -122,6 +122,8 @@ extern PIELIGHT		psPalette[];
 extern void		pal_Init(void);
 extern void		pal_ShutDown(void);
 extern PIELIGHT		pal_GetTeamColour(int team);
+void pal_tweakColour(int team, int n, int delta);
+void pal_saveTweakedColour();
 
 static inline PIELIGHT pal_Colour(UBYTE r, UBYTE g, UBYTE b)
 {

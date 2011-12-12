@@ -944,8 +944,16 @@ void	kf_ExpandScreen( void )
 */
 // --------------------------------------------------------------------------
 /* Spins the world round left */
+static double rgbSelD = 0;
+static int rgbSel = 0;
 void	kf_RotateLeft( void )
 {
+	int oldRgbSel = rgbSel;
+	rgbSelD += realTimeAdjustedIncrement(2);
+	rgbSel = (int)rgbSelD%3;
+	char const *asdf[3] = {"Editing red", "Editing green", "Editing blue"};
+	if (rgbSel != oldRgbSel) sendTextMessage(asdf[rgbSel], true);
+	return;
 	float rotAmount = realTimeAdjustedIncrement(MAP_SPIN_RATE);
 
 	player.r.y += rotAmount;
@@ -955,6 +963,13 @@ void	kf_RotateLeft( void )
 /* Spins the world right */
 void	kf_RotateRight( void )
 {
+	int oldRgbSel = rgbSel;
+	rgbSelD -= realTimeAdjustedIncrement(2);
+	while (rgbSelD < 0) rgbSelD += 3;
+	rgbSel = (int)rgbSelD%3;
+	char const *asdf[3] = {"Editing red", "Editing green", "Editing blue"};
+	if (rgbSel != oldRgbSel) sendTextMessage(asdf[rgbSel], true);
+	return;
 	float rotAmount = realTimeAdjustedIncrement(MAP_SPIN_RATE);
 
 	player.r.y -= rotAmount;
@@ -966,8 +981,14 @@ void	kf_RotateRight( void )
 
 // --------------------------------------------------------------------------
 /* Pitches camera back */
+#include "lib/ivis_opengl/piepalette.h"
+static double qwert = 0;
 void	kf_PitchBack( void )
 {
+	qwert += realTimeAdjustedIncrement(30);
+	pal_tweakColour(selectedPlayer, rgbSel, (int)qwert);
+	qwert -= (int)qwert;
+	return;
 	float pitchAmount = realTimeAdjustedIncrement(MAP_PITCH_RATE);
 
 	player.r.x += pitchAmount;
@@ -983,6 +1004,10 @@ void	kf_PitchBack( void )
 /* Pitches camera foward */
 void	kf_PitchForward( void )
 {
+	qwert -= realTimeAdjustedIncrement(30);
+	pal_tweakColour(selectedPlayer, rgbSel, (int)qwert);
+	qwert -= (int)qwert;
+	return;
 	float pitchAmount = realTimeAdjustedIncrement(MAP_PITCH_RATE);
 
 	player.r.x -= pitchAmount;
@@ -997,6 +1022,8 @@ void	kf_PitchForward( void )
 /* Resets pitch to default */
 void	kf_ResetPitch( void )
 {
+	pal_saveTweakedColour();
+	return;
 	player.r.x = DEG(360-20);
 	setViewDistance(START_DISTANCE);
 }
