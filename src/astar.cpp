@@ -104,6 +104,8 @@ struct PathBlockingType
 /// Pathfinding blocking map
 struct PathBlockingMap
 {
+PathBlockingMap() : inUse(0) {}
+~PathBlockingMap() { if (inUse != 0) abort(); }
 	bool operator ==(PathBlockingType const &z) const
 	{
 		return type.gameTime == z.gameTime &&
@@ -114,6 +116,7 @@ struct PathBlockingMap
 	PathBlockingType type;
 	std::vector<bool> map;
 	std::vector<bool> dangerMap;	// using threatBits
+volatile mutable unsigned inUse;
 };
 
 struct PathNonblockingArea
@@ -133,7 +136,11 @@ struct PathNonblockingArea
 // Data structures used for pathfinding, can contain cached results.
 struct PathfindContext
 {
-	PathfindContext() : myGameTime(0), iteration(0), blockingMap(NULL) {}
+	PathfindContext() : myGameTime(0), iteration(0), blockingMap(NULL), inUse(0) {}
+~PathfindContext() {
+	if (inUse != 0) abort();
+	if (blockingMap != NULL && blockingMap->inUse-- == 0) abort();
+}
 	bool isBlocked(int x, int y) const
 	{
 		if (dstIgnore.isNonblocking(x, y))
@@ -154,7 +161,9 @@ struct PathfindContext
 	}
 	void assign(PathBlockingMap const *blockingMap_, PathCoord tileS_, PathNonblockingArea dstIgnore_)
 	{
+if (blockingMap != NULL && blockingMap->inUse-- == 0) abort();
 		blockingMap = blockingMap_;
+++blockingMap->inUse;
 		tileS = tileS_;
 		dstIgnore = dstIgnore_;
 		myGameTime = blockingMap->type.gameTime;
@@ -184,6 +193,7 @@ struct PathfindContext
 	std::vector<PathExploredTile> map;  ///< Map, with paths leading back to tileS.
 	PathBlockingMap const *blockingMap; ///< Map of blocking tiles for the type of object which needs a path.
 	PathNonblockingArea dstIgnore;      ///< Area of structure at destination which should be considered nonblocking.
+volatile mutable unsigned inUse;
 };
 
 /// Last recently used list of contexts.
@@ -334,6 +344,7 @@ static void fpathAStarReestimate(PathfindContext &context, PathCoord tileF)
 /// Returns nearest explored tile to tileF.
 static PathCoord fpathAStarExplore(PathfindContext &context, PathCoord tileF)
 {
+++context.inUse;
 	PathCoord       nearestCoord(0, 0);
 	unsigned        nearestDist = 0xFFFFFFFF;
 
@@ -407,6 +418,7 @@ static PathCoord fpathAStarExplore(PathfindContext &context, PathCoord tileF)
 			fpathNewNode(context, tileF, PathCoord(x, y), node.dist, node.p);
 		}
 	}
+if (context.inUse-- == 0) abort();
 
 	return nearestCoord;
 }
@@ -581,7 +593,18 @@ void fpathSetBlockingMap(PATHJOB *psJob)
 	{
 		// New tick, remove maps which are no longer needed.
 		fpathCurrentGameTime = gameTime;
+printf("gameTime ticked to %u\n", gameTime);
 		fpathPrevBlockingMaps.swap(fpathBlockingMaps);
+for (std::list<PathfindContext>::iterator contextIterator = fpathContexts.begin(); contextIterator != fpathContexts.end(); ++contextIterator)
+{
+	for (std::list<PathBlockingMap>::iterator i = fpathBlockingMaps.begin(); i != fpathBlockingMaps.end(); ++i)
+		if (&*i == contextIterator->blockingMap)
+	{
+		printf("drop map %p in context %p from time %u\n", contextIterator->blockingMap, &*contextIterator, contextIterator->myGameTime);
+		if (contextIterator->blockingMap->inUse-- == 0) abort();
+		contextIterator->blockingMap = NULL;
+	}
+}
 		fpathBlockingMaps.clear();
 	}
 
