@@ -305,6 +305,8 @@ DROID::DROID(uint32_t id, unsigned player)
 
 	sMove.asPath = NULL;
 	sMove.Status = MOVEINACTIVE;
+	sMove.bestVector = Vector2i(0, 0);
+	sMove.bestVectorUpdateTime = 0;
 }
 
 /* DROID::~DROID: release all resources associated with a droid -

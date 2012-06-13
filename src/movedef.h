@@ -54,6 +54,9 @@ struct MOVE_CONTROL
 	Vector2i src, target;
 	int	speed;						// Speed of motion
 
+	Vector2i bestVector;                                    ///< Best direction for droid to move in while avoiding other droids.
+	unsigned bestVectorUpdateTime;                          ///< The gameTime that bestVector was last calculated.
+
 	uint16_t moveDir;					// direction of motion (not the direction the droid is facing)
 	uint16_t bumpDir;					// direction at last bump
 	UDWORD	bumpTime;					// time of first bump with something
@@ -69,5 +72,7 @@ struct MOVE_CONTROL
 	// iAttackRuns tracks the amount of ammunition a VTOL has remaining for each weapon
 	UDWORD	iAttackRuns[VTOL_MAXWEAPS];
 };
+
+void moveUpdate();
 
 #endif // __INCLUDED_MOVEDEF_H__

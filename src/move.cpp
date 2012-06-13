@@ -423,6 +423,7 @@ static void moveShuffleDroid(DROID *psDroid, Vector2i s)
 	psDroid->sMove.target = tar;
 	psDroid->sMove.numPoints = 0;
 	psDroid->sMove.pathIndex = 0;
+	psDroid->sMove.bestVector = iSinCosR(iAtan2(psDroid->sMove.target - removeZ(psDroid->pos)), TILE_UNITS);
 
 	CHECK_DROID(psDroid);
 }
@@ -1209,7 +1210,7 @@ static void moveCalcDroidSlide(DROID *psDroid, int *pmx, int *pmy)
 	}
 	CHECK_DROID(psDroid);
 }
-
+/*
 // get an obstacle avoidance vector
 static Vector2i moveGetObstacleVector(DROID *psDroid, Vector2i dest)
 {
@@ -1324,6 +1325,347 @@ static Vector2i moveGetObstacleVector(DROID *psDroid, Vector2i dest)
 
 	return dest * (65536 - ratio) + avoid * ratio;
 }
+*/
+
+struct MoveObstacle
+{
+	uint16_t direction;  ///< Direction from closest point on us to closest point on obstacle.
+	int factor;          ///< Factor which is large for small distances and small for large distances (where the obstacle would list us with the same factor).
+	int vectorIndex;     ///< Index of obstacle in navigation array, or -1 if obstacle is considered immobile.
+	int maxSpeed;        ///< Maximum of our speed and the obstacle's speed (such that maxSpeed is symmetric).
+};
+
+struct MoveNavigator
+{
+	int obstacleBegin, obstacleEnd;  ///< List of obstacles which affect this droid.
+	int maxSpeed;                    ///< Speed this droid is capable of moving.
+	uint16_t desiredDirection;       ///< Direction this droid wants to move in.
+};
+
+struct MoveNavigationEquation
+{
+	std::vector<MoveNavigator> nav;  ///< List of droids, and the obstacles which they need to avoid.
+	std::vector<MoveObstacle> obs;   ///< List of obstacles, indexed by the navigation array.
+
+	std::vector<DROID *> navDroids;     ///< Pointers to the actual droids, needed for writing the final result. One-to-one correspondance to the navigation array.
+	std::vector<DROID *> obsDroids;     ///< Pointers to the actual droids, needed temporily, before the vectorIndex is found. One-to-one correspondance to the obstacle array.
+};
+
+static bool moveNavigationIsDroidMoving(DROID *psDroid)
+{
+	return psDroid->sMove.Status == MOVEPOINTTOPOINT || psDroid->sMove.Status == MOVEPAUSE || psDroid->sMove.Status == MOVESHUFFLE;  // Don't know whether or not MOVEPAUSE should be in there.
+}
+
+static int moveNavigationDistFactor(int dist)
+{
+	return 65536 + iCos(clip(dist*(DEG(180)/TILE_UNITS), DEG(0), DEG(180)));  // Factor is 131072 if touching, and smoothly falls off to 0 at a 1 tile distance.
+}
+
+static void moveAddNavigationDroid(MoveNavigationEquation &eqn, DROID *psDroid)
+{
+	PROPULSION_STATS *psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
+	ASSERT(psPropStats, "invalid propulsion stats pointer");
+
+	MoveNavigator nav;
+	nav.maxSpeed = std::max<int>(psPropStats->maxSpeed, 1);
+	nav.desiredDirection = iAtan2(psDroid->sMove.target - removeZ(psDroid->pos));
+	int ourRadius = moveObjRadius(psDroid);
+	nav.obstacleBegin = eqn.obs.size();
+objTrace(psDroid->id, "maxSpeed %d, desiredDirection %04X, ourRadius %d, gameTime %d, Vector = (%d, %d), State = %s", nav.maxSpeed, nav.desiredDirection, ourRadius, gameTime, psDroid->sMove.bestVector.x, psDroid->sMove.bestVector.y, moveDescription(psDroid->sMove.Status));
+
+	// Scan the neighbours for obstacles.
+	gridStartIterate(psDroid->pos.x, psDroid->pos.y, AVOID_DIST);
+	for (BASE_OBJECT *psObj = gridIterate(); psObj != NULL; psObj = gridIterate())
+	{
+		if (psObj == psDroid)
+		{
+			continue;  // Don't try to avoid ourselves.
+		}
+
+		DROID *psObstacle = castDroid(psObj);
+		if (psObstacle == NULL || psObstacle->died)
+		{
+			// Object wrong type to worry about.
+			continue;
+		}
+
+		// vtol droids only avoid each other and don't affect ground droids
+		if (isVtolDroid(psDroid) != isVtolDroid(psObstacle))
+		{
+			continue;
+		}
+
+		bool isAllied = aiCheckAlliances(psObstacle->player, psDroid->player);
+		bool isTransporter = psObstacle->droidType == DROID_TRANSPORTER || psObstacle->droidType == DROID_SUPERTRANSPORTER;
+		bool canBeRunOver = psObstacle->droidType == DROID_PERSON;
+		if ((!bMultiPlayer && isTransporter) || (canBeRunOver && !isAllied))
+		{
+			// don't avoid people on the other side - run over them
+			continue;
+		}
+
+		int obstacleRadius = moveObjRadius(psObstacle);
+		int totalRadius = ourRadius + obstacleRadius;
+
+		// Position of obstacle relative to us.
+		Vector2i diff = removeZ(psObstacle->pos - psDroid->pos);
+		int dist = iHypot(diff) - totalRadius;
+
+		MoveObstacle obs;
+		obs.direction = iAtan2(diff);
+		obs.factor = moveNavigationDistFactor(dist);
+		if (obs.factor <= 0)
+		{
+			continue;  // Ignore obstacle, too far.
+		}
+		obs.maxSpeed = nav.maxSpeed;
+		if (isAllied && moveNavigationIsDroidMoving(psObstacle))
+		{
+			PROPULSION_STATS *psObstaclePropStats = asPropulsionStats + psObstacle->asBits[COMP_PROPULSION].nStat;
+			obs.maxSpeed = std::max<int>(obs.maxSpeed, psObstaclePropStats->maxSpeed);
+		}
+		// obs.vectorIndex is set later, by moveFindNavigationEquation().
+		eqn.obs.push_back(obs);
+		eqn.obsDroids.push_back(isAllied? psObstacle : NULL);
+objTrace(psDroid->id, " direction = %04X, factor = %d, maxSpeed = %d, isAllied = %d, Vector = (%d, %d), State = %s", obs.direction, obs.factor, obs.maxSpeed, isAllied, psObstacle->sMove.bestVector.x, psObstacle->sMove.bestVector.y, moveDescription(psDroid->sMove.Status));
+	}
+	for (int ty = map_coord(psDroid->pos.y - AVOID_DIST); ty <= map_coord(psDroid->pos.y + AVOID_DIST); ++ty)
+		for (int tx = map_coord(psDroid->pos.x - AVOID_DIST); tx <= map_coord(psDroid->pos.x + AVOID_DIST); ++tx)
+	{
+		if (!fpathBlockingTile(tx, ty, psPropStats->propulsionType))
+		{
+			continue;  // Not an obstacle.
+		}
+		// Position of obstacle relative to us.
+		Vector2i diff = world_coord(Vector2i(tx, ty)) - removeZ(psDroid->pos);
+		diff -= Vector2i(clip(diff.x, 0, TILE_UNITS - 1), clip(diff.y, 0, TILE_UNITS - 1));
+		if (diff == Vector2i(0, 0))
+		{
+			continue;  // Centre of droid is actually inside the blocking tile. Can't do anything sensible here, so just ignore it.
+		}
+		int dist = iHypot(diff) - ourRadius;
+
+		MoveObstacle obs;
+		obs.direction = iAtan2(diff);
+		obs.factor = moveNavigationDistFactor(dist);
+		if (obs.factor <= 0)
+		{
+			continue;  // Ignore obstacle, too far.
+		}
+		obs.maxSpeed = nav.maxSpeed;
+		eqn.obs.push_back(obs);
+		eqn.obsDroids.push_back((DROID *)NULL);  // Obstacle is not a droid, and hopefully can't move.
+objTrace(psDroid->id, " direction = %04X, factor = %d, maxSpeed = %d, tile", obs.direction, obs.factor, obs.maxSpeed);
+	}
+
+	nav.obstacleEnd = eqn.obs.size();
+	eqn.nav.push_back(nav);
+	eqn.navDroids.push_back(psDroid);
+}
+
+static void moveFindNavigationEquation(MoveNavigationEquation &eqn, DROID *psFirstDroid)
+{
+	eqn.nav.clear();
+	eqn.obs.clear();
+	eqn.navDroids.clear();
+	eqn.obsDroids.clear();
+
+	// Find list of nearby droids, which should be included in the equation to be solved.
+	static std::vector<DROID *> unprocessedDroids;  // Static to avoid allocations.
+	unprocessedDroids.assign(1, psFirstDroid);
+	while (!unprocessedDroids.empty())
+	{
+		DROID *psDroid = unprocessedDroids.back();
+		unprocessedDroids.pop_back();
+		if (psDroid->sMove.bestVectorUpdateTime == gameTime)
+		{
+			continue;  // Already processed this droid.
+		}
+		psDroid->sMove.bestVectorUpdateTime = gameTime;  // Mark this droid as processed.
+
+		// Add this droid to navigation array.
+		moveAddNavigationDroid(eqn, psDroid);
+
+		for (int j = eqn.nav.back().obstacleBegin; j != eqn.nav.back().obstacleEnd; ++j)
+		{
+			if (eqn.obsDroids[j] != NULL)
+			{
+				unprocessedDroids.push_back(eqn.obsDroids[j]);
+			}
+		}
+	}
+
+	// Set vectorIndex in the obstacle array, now that the navigation array is complete. The obsDroids array becomes redundant once this is done.
+	static std::vector<std::pair<DROID *, int> > droidLookup;  // Static to avoid allocations.
+	droidLookup.clear();
+	for (unsigned i = 0; i < eqn.navDroids.size(); ++i)
+	{
+		droidLookup.push_back(std::make_pair(eqn.navDroids[i], i));
+	}
+	droidLookup.push_back(std::make_pair((DROID *)NULL, -1));
+	std::sort(droidLookup.begin(), droidLookup.end());
+	for (unsigned i = 0; i < eqn.obsDroids.size(); ++i)
+	{
+		eqn.obs[i].vectorIndex = std::lower_bound(droidLookup.begin(), droidLookup.end(), std::make_pair(eqn.obsDroids[i], -1))->second;
+	}
+
+	ASSERT(eqn.nav.size() == eqn.navDroids.size(), "This can't happen.");
+}
+
+static void moveNavigationReadVector(MoveNavigationEquation const &eqn, std::vector<Vector2i> &vec)
+{
+	vec.resize(eqn.navDroids.size());
+	for (unsigned i = 0; i < eqn.navDroids.size(); ++i)
+	{
+		vec[i] = Vector2i(0, 0);  // Could use eqn.navDroids[i]->sMove.bestVector, or start from Vector2i(0, 0) each tick.
+	}
+}
+
+static void moveNavigationWriteVector(MoveNavigationEquation const &eqn, std::vector<Vector2i> const &vec)
+{
+	for (unsigned i = 0; i < eqn.navDroids.size(); ++i)
+	{
+		eqn.navDroids[i]->sMove.bestVector = vec[i];
+	}
+}
+
+static int64_t moveNavigationEquationGradient(MoveNavigationEquation const &eqn, std::vector<Vector2i> const &vec, std::vector<Vector2i> &grad)
+{
+	int64_t f = 0;  // The actual function value, which grad is a gradient of.
+	// For consistency (and being able find the vec which maximises f (implying grad = 0)), it is required that grad = ∂f/∂vec.
+	// If changing the calculation of grad or f, the other needs to be changed accordingly.
+
+	const int arbitraryFactor = 65536;
+
+	grad.resize(eqn.nav.size());
+	for (unsigned i = 0; i < eqn.nav.size(); ++i)
+	{
+		Vector2i g(0, 0);
+
+		// Want to go in desiredDirection.
+		Vector2i desVec = iSinCosR(eqn.nav[i].desiredDirection, arbitraryFactor);
+		g += iSinCosR(eqn.nav[i].desiredDirection, arbitraryFactor);
+		f += vec[i]*desVec;
+
+		const int quadraticFactor = 5;  // Arbitrary, the higher this is, the more the droids want to keep moving no matter which way.
+		const int cubicFactor = quadraticFactor + 1;  // Invariant.
+
+		// Want to go at maxSpeed, if nothing stops us.
+		int vecLen = iHypot(vec[i]);
+		int speedSq = std::max(eqn.nav[i].maxSpeed * eqn.nav[i].maxSpeed, 1);
+		g.x -= (int64_t)vec[i].x * vecLen * arbitraryFactor*cubicFactor / speedSq;
+		g.y -= (int64_t)vec[i].y * vecLen * arbitraryFactor*cubicFactor / speedSq;
+		f   -= (int64_t)vecLen*vecLen*vecLen * arbitraryFactor*cubicFactor / speedSq / 3;
+
+		// Want to keep moving, even if not in exactly the right direction.
+		int speed = std::max(eqn.nav[i].maxSpeed, 1);
+		g.x += (int64_t)vec[i].x * arbitraryFactor*quadraticFactor / speed;
+		g.y += (int64_t)vec[i].y * arbitraryFactor*quadraticFactor / speed;
+		f   += (int64_t)vecLen*vecLen * arbitraryFactor*quadraticFactor / speed / 2;
+
+		// Want to avoid other obstacles.
+		for (int j = eqn.nav[i].obstacleBegin; j != eqn.nav[i].obstacleEnd; ++j)
+		{
+			Vector2i deltaVec = vec[i];
+			if (eqn.obs[j].vectorIndex >= 0)
+			{
+				deltaVec -= vec[eqn.obs[j].vectorIndex];
+			}
+
+			const int tempFactorWhichCancels = 65536;
+			Vector2i obsVec = iSinCosR(eqn.obs[j].direction, tempFactorWhichCancels);
+			int64_t dot = deltaVec.x*obsVec.x + deltaVec.y*obsVec.y;
+			int64_t myDot = vec[i].x*obsVec.x + vec[i].y*obsVec.y;
+			int64_t amountTowards = dot*DEG(180)/(eqn.obs[j].maxSpeed*tempFactorWhichCancels);
+			int64_t clippedAmountTowards = clip(amountTowards, DEG(0), DEG(180));
+			int64_t clippedOffPartOfDot = amountTowards > clippedAmountTowards? (amountTowards - clippedAmountTowards)*(eqn.obs[j].maxSpeed*tempFactorWhichCancels)/DEG(180) : 0;
+			int avoidiness = 65536 - iCos(clippedAmountTowards);  // Avoidiness ranges from 131072 if going straight to the obstacle, to 0 if not getting closer to the obstacle.
+			g -= iSinCosR(eqn.obs[j].direction, (int64_t)avoidiness*eqn.obs[j].factor/65536);
+			f -= (int64_t)avoidiness*eqn.obs[j].factor * ((myDot + clippedOffPartOfDot)*355/tempFactorWhichCancels - iSinR(clippedAmountTowards, eqn.obs[j].maxSpeed*113))/355;  // 355/113 ≈ π
+		}
+
+		grad[i] = g;
+	}
+
+	return f;
+}
+
+static void moveSolveNavigationEquation(MoveNavigationEquation const &eqn, std::vector<Vector2i> &vec)
+{
+	static std::vector<Vector2i> newGrad;  // Static to save allocations.
+	static std::vector<Vector2i> grad;  // Static to save allocations.
+	static std::vector<Vector2i> newVec;  // Static to save allocations.
+	newVec.resize(vec.size());
+	int64_t f = moveNavigationEquationGradient(eqn, vec, grad);
+	//int stepRatio = 65536;
+	// Want to find the top of the gradient.
+	int stepRatio = 10000;
+if (eqn.navDroids[0]->player == 0)
+debug(LOG_INFO, "gameTime %d, q = INIT, stepRatio = INIT, len = ?, REJECT, f = %"PRId64"", gameTime, f);
+	for (int q = 0; q < 100 && stepRatio < 1000000; ++q)
+	{
+int64_t len = 0;
+		int64_t change = 0;
+		for (unsigned i = 0; i < eqn.nav.size(); ++i)
+		{
+			newVec[i] = vec[i] + grad[i]/stepRatio;
+			change += (grad[i]/stepRatio)*(grad[i]/stepRatio);
+len += (int64_t)grad[i].x*grad[i].x + (int64_t)grad[i].y*grad[i].y;
+		}
+		if (change == 0)
+		{
+			break;
+		}
+
+		int64_t newF = moveNavigationEquationGradient(eqn, newVec, newGrad);
+		if (newF < f)
+		{
+			// New vec is worse, undo.
+if (eqn.navDroids[0]->player == 0)
+debug(LOG_INFO, "gameTime %d, q = %d, stepRatio = %d, len = %lf, change = %lf, REJECT, f = %"PRId64"", gameTime, q, stepRatio, sqrt(len), sqrt(change), newF);
+			stepRatio = stepRatio * 9/7;
+			continue;
+		}
+		// New vec is better.
+		vec = newVec;
+		grad = newGrad;
+		f = newF;
+if (eqn.navDroids[0]->player == 0)
+debug(LOG_INFO, "gameTime %d, q = %d, stepRatio = %d, len = %lf, change = %lf, f = %"PRId64"", gameTime, q, stepRatio, sqrt(len), sqrt(change), newF);
+		stepRatio = stepRatio * 7/9 + 1;
+	}
+}
+
+static void moveUpdateBestVector(DROID *psFirstDroid)
+{
+	// Start with an empty equation.
+	static MoveNavigationEquation eqn;  // Static to avoid allocations.
+	moveFindNavigationEquation(eqn, psFirstDroid);
+
+	// Read the previous equation solution as a starting point.
+	static std::vector<Vector2i> vec;  // Static to avoid allocations.
+	moveNavigationReadVector(eqn, vec);
+
+	// Solve the equation.
+	moveSolveNavigationEquation(eqn, vec);
+
+	// Read the previous equation solution as a starting point.
+	moveNavigationWriteVector(eqn, vec);
+}
+
+void moveUpdate()
+{
+	for (unsigned i = 0; i < MAX_PLAYERS; ++i)
+	{
+		for (DROID *psCurr = apsDroidLists[i]; psCurr != NULL; psCurr = psCurr->psNext)
+		{
+			if (psCurr->sMove.bestVectorUpdateTime != gameTime && moveNavigationIsDroidMoving(psCurr))
+			{
+				moveUpdateBestVector(psCurr);  // Update this droid, and all nearby droids.
+			}
+		}
+	}
+}
 
 /*!
  * Get a direction for a droid to avoid obstacles etc.
@@ -1332,17 +1674,13 @@ static Vector2i moveGetObstacleVector(DROID *psDroid, Vector2i dest)
  */
 static uint16_t moveGetDirection(DROID *psDroid)
 {
-	Vector2i src = removeZ(psDroid->pos);  // Do not want precice precision here, would overflow.
-	Vector2i target = psDroid->sMove.target;
-	Vector2i dest = target - src;
-
 	// Transporters don't need to avoid obstacles, but everyone else should
-	if (psDroid->droidType != DROID_TRANSPORTER && psDroid->droidType != DROID_SUPERTRANSPORTER)
+	if (!bMultiPlayer && (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER))
 	{
-		dest = moveGetObstacleVector(psDroid, dest);
+		return iAtan2(psDroid->sMove.target - removeZ(psDroid->pos));
 	}
 
-	return iAtan2(dest);
+	return iAtan2(psDroid->sMove.bestVector);
 }
 
 // Check if a droid has got to a way point
@@ -2442,6 +2780,7 @@ void moveUpdateDroid(DROID *psDroid)
 		psDroid->sMove.Status = MOVEPOINTTOPOINT;
 		psDroid->sMove.bumpTime = 0;
 		moveSpeed = MAX(0, psDroid->sMove.speed - 1);
+		psDroid->sMove.bestVector = iSinCosR(iAtan2(psDroid->sMove.target - removeZ(psDroid->pos)), TILE_UNITS);
 
 		/* save started status for movePlayAudio */
 		if (psDroid->sMove.speed == 0)

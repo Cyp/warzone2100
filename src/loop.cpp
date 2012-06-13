@@ -470,6 +470,9 @@ static void gameStateUpdate()
 	//update the findpath system
 	fpathUpdate();
 
+	// Update the droid obstacle avoidance vectors.
+	moveUpdate();
+
 	// update the cluster system
 	clusterUpdate();
 
