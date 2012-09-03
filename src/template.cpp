@@ -42,10 +42,9 @@
 
 /* default droid design template */
 extern DROID_TEMPLATE	sDefaultDesignTemplate;
-
+extern bool		bInTutorial;
 // Template storage
 DROID_TEMPLATE		*apsDroidTemplates[MAX_PLAYERS];
-DROID_TEMPLATE		*apsStaticTemplates;	// for AIs and scripts
 
 bool allowDesign = true;
 
@@ -62,7 +61,27 @@ static const StringToEnum<DROID_TYPE> map_DROID_TYPE[] =
 	{"DROID",               DROID_DEFAULT           },
 };
 
-bool researchedTemplate(DROID_TEMPLATE *psCurr, int player)
+static bool researchedItem(DROID_TEMPLATE *psCurr, int player, COMPONENT_TYPE partIndex, int part, bool allowZero, bool allowRedundant)
+{
+	if (allowZero && part <= 0)
+	{
+		return true;
+	}
+	int availability = apCompLists[player][partIndex][part];
+	return availability == AVAILABLE || (allowRedundant && availability == REDUNDANT);
+}
+
+static bool researchedPart(DROID_TEMPLATE *psCurr, int player, COMPONENT_TYPE partIndex, bool allowZero, bool allowRedundant)
+{
+	return researchedItem(psCurr, player, partIndex, psCurr->asParts[partIndex], allowZero, allowRedundant);
+}
+
+static bool researchedWeap(DROID_TEMPLATE *psCurr, int player, int weapIndex, bool allowRedundant)
+{
+	return researchedItem(psCurr, player, COMP_WEAPON, psCurr->asWeaps[weapIndex], false, allowRedundant);
+}
+
+bool researchedTemplate(DROID_TEMPLATE *psCurr, int player, bool allowRedundant, bool verbose)
 {
 	// super hack -- cyborgs and transports are special, only check their body
 	switch (psCurr->droidType)
@@ -74,24 +93,35 @@ bool researchedTemplate(DROID_TEMPLATE *psCurr, int player)
 	case DROID_CYBORG_REPAIR:
 	case DROID_TRANSPORTER:
 	case DROID_SUPERTRANSPORTER:
-		return (apCompLists[player][COMP_BODY][psCurr->asParts[COMP_BODY]] == AVAILABLE);
+		return researchedPart(psCurr, player, COMP_BODY, false, allowRedundant);
 	default:
 		break; // now proceed to normal droids...
 	}
 	// Note the ugly special case for commanders - their weapon is unavailable
-	if (apCompLists[player][COMP_BODY][psCurr->asParts[COMP_BODY]] != AVAILABLE
-	    || (psCurr->asParts[COMP_BRAIN] > 0 && apCompLists[player][COMP_BRAIN][psCurr->asParts[COMP_BRAIN]] != AVAILABLE)
-	    || apCompLists[player][COMP_PROPULSION][psCurr->asParts[COMP_PROPULSION]] != AVAILABLE
-	    || (psCurr->asParts[COMP_SENSOR] > 0 && apCompLists[player][COMP_SENSOR][psCurr->asParts[COMP_SENSOR]] != AVAILABLE)
-	    || (psCurr->asParts[COMP_ECM] > 0 && apCompLists[player][COMP_ECM][psCurr->asParts[COMP_ECM]] != AVAILABLE)
-	    || (psCurr->asParts[COMP_REPAIRUNIT] > 0 && apCompLists[player][COMP_REPAIRUNIT][psCurr->asParts[COMP_REPAIRUNIT]] != AVAILABLE)
-	    || (psCurr->asParts[COMP_CONSTRUCT] > 0 && apCompLists[player][COMP_CONSTRUCT][psCurr->asParts[COMP_CONSTRUCT]] != AVAILABLE)
-	    || (psCurr->asParts[COMP_BRAIN] == 0 && psCurr->numWeaps > 0 && apCompLists[player][COMP_WEAPON][psCurr->asWeaps[0]] != AVAILABLE)
-	    || (psCurr->numWeaps > 1 && apCompLists[player][COMP_WEAPON][psCurr->asWeaps[1]] != AVAILABLE))
+	// NOTE: This was one ugly & hard to debug if statement.
+	bool resBody = researchedPart(psCurr, player, COMP_BODY, false, allowRedundant);
+	bool resBrain = researchedPart(psCurr, player, COMP_BRAIN, true, allowRedundant);
+	bool resProp = researchedPart(psCurr, player, COMP_PROPULSION, false, allowRedundant);
+	bool resSensor = researchedPart(psCurr, player, COMP_SENSOR, true, allowRedundant);
+	bool resEcm = researchedPart(psCurr, player, COMP_ECM, true, allowRedundant);
+	bool resRepair = researchedPart(psCurr, player, COMP_REPAIRUNIT, true, allowRedundant);
+	bool resConstruct = researchedPart(psCurr, player, COMP_CONSTRUCT, true, allowRedundant);
+	bool researchedEverything = resBody && resBrain && resProp && resSensor && resEcm && resRepair && resConstruct;
+	if (verbose && !researchedEverything)
 	{
-		return false;
+		debug(LOG_ERROR, "%s : not researched : body=%d brai=%d prop=%d sensor=%d ecm=%d rep=%d con=%d", psCurr->aName,
+		      (int)resBody, (int)resBrain, (int)resProp, (int)resSensor, (int)resEcm, (int)resRepair, (int)resConstruct);
 	}
-	return true;
+	unsigned ignoreFirstWeapon = psCurr->asParts[COMP_BRAIN] != 0? 1 : 0;
+	for (unsigned weapIndex = ignoreFirstWeapon; weapIndex < psCurr->numWeaps && researchedEverything; ++weapIndex)
+	{
+		researchedEverything = researchedWeap(psCurr, player, weapIndex, allowRedundant);
+		if (!researchedEverything && verbose)
+		{
+			debug(LOG_ERROR, "%s : not researched weapon %u", psCurr->aName, weapIndex);
+		}
+	}
+	return researchedEverything;
 }
 
 bool initTemplates()
@@ -236,10 +266,7 @@ void initTemplatePoints(void)
 			initTemplatePoints(pDroidDesign);
 		}
 	}
-	for (DROID_TEMPLATE *pDroidDesign = apsStaticTemplates; pDroidDesign != NULL; pDroidDesign = pDroidDesign->psNext)
-	{
-		initTemplatePoints(pDroidDesign);
-	}
+
 	for (std::list<DROID_TEMPLATE>::iterator pDroidDesign = localTemplates.begin(); pDroidDesign != localTemplates.end(); ++pDroidDesign)
 	{
 		initTemplatePoints(&*pDroidDesign);
@@ -344,30 +371,51 @@ bool loadDroidTemplates(const char *pDroidData, UDWORD bufferSize)
 		else
 		{
 			std::string playerType = line.s(6);
-			// Give those meant for humans to all human players.
-			// Also support the old template format, in which those meant
-			// for humans were player 0 (in campaign) or 5 (in multiplayer).
-			if ((!bMultiPlayer && playerType == "0") ||
-			    ( bMultiPlayer && playerType == "5") ||
-					      playerType == "YES"
-			   )
+
+			for (int i = 0; i < MAX_PLAYERS; ++i)
 			{
-				for (int i = 0; i < MAX_PLAYERS; ++i)
+				// Give those meant for humans to all human players.
+				// Also support the old template format, in which those meant
+				// for humans were player 0 (in campaign) or 5 (in multiplayer), ("YES" is used in MP stats)
+				if (NetPlay.players[i].allocated &&
+					((!bMultiPlayer && playerType == "0") || (bMultiPlayer && playerType == "5") || playerType == "YES"))
 				{
-					if (NetPlay.players[i].allocated)  // human prototype template
+					debug(LOG_NEVER, "HUMAN (%d): %s id:%d enabled:%d", i, design.aName, design.multiPlayerID, design.enabled);
+					design.prefab = false;
+					addTemplateToList(&design, &apsDroidTemplates[i]);
+
+					// This sets up the UI templates for display purposes ONLY--we still only use apsDroidTemplates for making them.
+					// FIXME: Why are we doing this here, and not on demmand ?
+					// Only add unique designs to the UI list (Note, perhaps better to use std::map instead?)
+					std::list<DROID_TEMPLATE>::iterator it;
+					for (it = localTemplates.begin(); it != localTemplates.end(); ++it)
 					{
-						design.prefab = false;
-						addTemplateToList(&design, &apsDroidTemplates[i]);
+						DROID_TEMPLATE *psCurr = &*it;
+						if (psCurr->multiPlayerID == design.multiPlayerID)
+						{
+							debug(LOG_NEVER, "Design id:%d (%s) *NOT* added to UI list (duplicate), player= %d", design.multiPlayerID, design.aName, i);
+							break;
+						}
+					}
+					if (it == localTemplates.end())
+					{
+						debug(LOG_NEVER, "Design id:%d (%s) added to UI list, player =%d", design.multiPlayerID, design.aName, i);
+						localTemplates.push_front(design);
+						localTemplates.front().pName = strdup(localTemplates.front().pName);
 					}
 				}
-				localTemplates.push_front(design);
-				localTemplates.front().pName = strdup(localTemplates.front().pName);
+				else if (NetPlay.players[i].allocated)	//skip the ones not meant for puny humans
+				{
+					continue;
+				}
+				else	// assume everything else is for AI
+				{
+					debug(LOG_NEVER, "AI (%d): %s id:%d enabled:%d", i, design.aName, design.multiPlayerID, design.enabled);
+					design.prefab = true;  // prefabricated templates referenced from VLOs
+					addTemplateToList(&design, &apsDroidTemplates[i]);
+				}
 			}
-			// Add all templates to static template list
-			design.prefab = true;  // prefabricated templates referenced from VLOs
-			addTemplateToList(&design, &apsStaticTemplates);
 		}
-
 		debug(LOG_NEVER, "(default) Droid template found, aName: %s, MP ID: %d, ref: %u, pname: %s, prefab: %s, type:%d (loading)",
 			design.aName, design.multiPlayerID, design.ref, design.pName, design.prefab ? "yes":"no", design.droidType);
 	}
@@ -392,22 +440,11 @@ bool droidTemplateShutDown(void)
 			{
 				free(pTemplate->pName);
 			}
-			ASSERT(!pTemplate->prefab, "Static template %s in player template list!", pTemplate->aName);
 			delete pTemplate;
 		}
 		apsDroidTemplates[player] = NULL;
 	}
-	for (pTemplate = apsStaticTemplates; pTemplate != NULL; pTemplate = pNext)
-	{
-		pNext = pTemplate->psNext;
-		if (pTemplate->pName != sDefaultDesignTemplate.pName)		// sanity check probably no longer necessary
-		{
-			free(pTemplate->pName);
-		}
-		ASSERT(pTemplate->prefab, "Player template %s in static template list!", pTemplate->aName);
-		delete pTemplate;
-	}
-	apsStaticTemplates = NULL;
+
 	free(sDefaultDesignTemplate.pName);
 	sDefaultDesignTemplate.pName = NULL;
 
@@ -421,83 +458,6 @@ bool droidTemplateShutDown(void)
 }
 
 /*!
- * Get a static template from its aName.
- * This checks the all the Human's apsDroidTemplates list.
- * This function is similar to getTemplateFromUniqueName() but we use aName,
- * and not pName, since we don't have that information, and we are checking all player's list.
- * THIS FUNCTION WILL GO AWAY! Only used (badly) in "clone" cheat currently.
- * \param aName Template aName
- *
- */
-DROID_TEMPLATE	*GetHumanDroidTemplate(const char *aName)
-{
-	DROID_TEMPLATE	*templatelist, *found = NULL, *foundOtherPlayer = NULL;
-	int i, playerFound = 0;
-
-	for (i=0; i < MAX_PLAYERS; i++)
-	{
-		templatelist = apsDroidTemplates[i];
-		while (templatelist)
-		{
-			if (!strcmp(templatelist->aName, aName))
-			{
-				debug(LOG_NEVER, "Droid template found, aName: %s, MP ID: %d, ref: %u, pname: %s (for player %d)",
-					templatelist->aName, templatelist->multiPlayerID, templatelist->ref, templatelist->pName, i);
-				if (i == selectedPlayer)
-				{
-					found = templatelist;
-				}
-				else
-				{
-					foundOtherPlayer = templatelist;
-					playerFound = i;
-				}
-			}
-
-			templatelist = templatelist->psNext;
-		}
-	}
-
-	if (foundOtherPlayer && !found)
-	{
-		debug(LOG_ERROR, "The template was not in our list, but was in another players list.");
-		debug(LOG_ERROR, "Droid template's aName: %s, MP ID: %d, ref: %u, pname: %s (for player %d)",
-			foundOtherPlayer->aName, foundOtherPlayer->multiPlayerID, foundOtherPlayer->ref, foundOtherPlayer->pName, playerFound);
-		return foundOtherPlayer;
-	}
-
-	return found;
-}
-
-/*!
- * Get a static template from its aName.
- * This checks the AI apsStaticTemplates.
- * This function is similar to getTemplateFromTranslatedNameNoPlayer() but we use aName,
- * and not pName, since we don't have that information.
- * \param aName Template aName
- *
- */
-DROID_TEMPLATE *GetAIDroidTemplate(const char *aName)
-{
-	DROID_TEMPLATE	*templatelist, *found = NULL;
-
-	templatelist = apsStaticTemplates;
-	while (templatelist)
-	{
-		if (!strcmp(templatelist->aName, aName))
-		{
-			debug(LOG_INFO, "Droid template found, name: %s, MP ID: %d, ref: %u, pname: %s ",
-				templatelist->aName, templatelist->multiPlayerID, templatelist->ref, templatelist->pName);
-
-			found = templatelist;
-		}
-		templatelist = templatelist->psNext;
-	}
-
-	return found;
-}
-
-/*!
  * Gets a template from its name
  * relies on the name being unique (or it will return the first one it finds!)
  * \param pName Template name
@@ -507,15 +467,9 @@ DROID_TEMPLATE *GetAIDroidTemplate(const char *aName)
  */
 DROID_TEMPLATE * getTemplateFromUniqueName(const char *pName, unsigned int player)
 {
-	DROID_TEMPLATE *psCurr;
-	DROID_TEMPLATE *list = apsStaticTemplates;	// assume AI
+	DROID_TEMPLATE *list = apsDroidTemplates[player];
 
-	if (isHumanPlayer(player))
-	{
-		list = apsDroidTemplates[player];	// was human
-	}
-
-	for (psCurr = list; psCurr != NULL; psCurr = psCurr->psNext)
+	for (DROID_TEMPLATE *psCurr = list; psCurr != NULL; psCurr = psCurr->psNext)
 	{
 		if (strcmp(psCurr->pName, pName) == 0)
 		{
@@ -534,18 +488,17 @@ DROID_TEMPLATE * getTemplateFromUniqueName(const char *pName, unsigned int playe
  */
 DROID_TEMPLATE *getTemplateFromTranslatedNameNoPlayer(char const *pName)
 {
-	const char *rName;
-	DROID_TEMPLATE *psCurr;
-
-	for (psCurr = apsStaticTemplates; psCurr != NULL; psCurr = psCurr->psNext)
+	for (int i=0; i < MAX_PLAYERS; i++)
 	{
-		rName = psCurr->pName ? psCurr->pName : psCurr->aName;
-		if (strcmp(rName, pName) == 0)
+		for (DROID_TEMPLATE *psCurr = apsDroidTemplates[i]; psCurr != NULL; psCurr = psCurr->psNext)
 		{
-			return psCurr;
+			const char *rName = psCurr->pName ? psCurr->pName : psCurr->aName;
+			if (strcmp(rName, pName) == 0)
+			{
+				return psCurr;
+			}
 		}
 	}
-
 	return NULL;
 }
 

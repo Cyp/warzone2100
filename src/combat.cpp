@@ -35,6 +35,7 @@
 #include "mapgrid.h"
 #include "projectile.h"
 #include "random.h"
+#include "qtscript.h"
 
 // maximum random pause for firing
 #define RANDOM_PAUSE	500
@@ -54,7 +55,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	/* Watermelon:dont shoot if the weapon_slot of a vtol is empty */
 	if (psAttacker->type == OBJ_DROID && isVtolDroid(((DROID *)psAttacker)))
 	{
-		if (((DROID *)psAttacker)->sMove.iAttackRuns[weapon_slot] >= getNumAttackRuns(((DROID *)psAttacker), weapon_slot))
+		if (psWeap->usedAmmo >= getNumAttackRuns(((DROID *)psAttacker), weapon_slot))
 		{
 			objTrace(psAttacker->id, "VTOL slot %d is empty", weapon_slot);
 			return false;
@@ -74,16 +75,24 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 
 	unsigned fireTime = gameTime - deltaGameTime + 1;  // Can fire earliest at the start of the tick.
 
-	/*see if reload-able weapon and out of ammo*/
-	if (psStats->reloadTime && !psWeap->ammo)
+	// See if reloadable weapon.
+	if (psStats->reloadTime)
 	{
-		fireTime = std::max(fireTime, psWeap->lastFired + weaponReloadTime(psStats, psAttacker->player));
-		if (gameTime < fireTime)
+		unsigned reloadTime = psWeap->lastFired + weaponReloadTime(psStats, psAttacker->player);
+		if (psWeap->ammo == 0)  // Out of ammo?
 		{
-			return false;
+			fireTime = std::max(fireTime, reloadTime);  // Have to wait for weapon to reload before firing.
+			if (gameTime < fireTime)
+			{
+				return false;
+			}
 		}
-		//reset the ammo level
-		psWeap->ammo = psStats->numRounds;
+
+		if (reloadTime <= fireTime)
+		{
+			//reset the ammo level
+			psWeap->ammo = psStats->numRounds;
+		}
 	}
 
 	/* See when the weapon last fired to control it's rate of fire */
@@ -153,12 +162,7 @@ bool combFire(WEAPON *psWeap, BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, in
 	}
 
 	int baseHitChance = 0;
-	if (dist <= psStats->shortRange && dist >= psStats->minRange)
-	{
-		// get weapon chance to hit in the short range
-		baseHitChance = weaponShortHit(psStats,psAttacker->player);
-	}
-	else if (dist <= longRange && dist >= psStats->minRange)
+	if (dist <= longRange && dist >= psStats->minRange)
 	{
 		// get weapon chance to hit in the long range
 		baseHitChance = weaponLongHit(psStats,psAttacker->player);
@@ -370,7 +374,7 @@ void counterBatteryFire(BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget)
  */
 int32_t objDamage(BASE_OBJECT *psObj, unsigned damage, unsigned originalhp, WEAPON_CLASS weaponClass, WEAPON_SUBCLASS weaponSubClass, bool isDamagePerSecond)
 {
-	int	actualDamage, armour, level = 1;
+	int	actualDamage, armour, level = 1, lastHit = psObj->timeLastHit;
 
 	// If the previous hit was by an EMP cannon and this one is not:
 	// don't reset the weapon class and hit time
@@ -387,25 +391,27 @@ int32_t objDamage(BASE_OBJECT *psObj, unsigned damage, unsigned originalhp, WEAP
 		return 0;
 	}
 
-
 	// apply game difficulty setting
 	damage = modifyForDifficultyLevel(damage, psObj->player != selectedPlayer);
 
 	armour = psObj->armour[weaponClass];
 
-	debug(LOG_ATTACK, "objDamage(%d): body %d armour %d damage: %d", psObj->id, psObj->body, armour, damage);
-
 	if (psObj->type == OBJ_STRUCTURE || psObj->type == OBJ_DROID)
 	{
+		if (psObj->type == OBJ_STRUCTURE && ((STRUCTURE *)psObj)->status == SS_BEING_BUILT)
+		{
+			armour = 0;
+		}
 		// Force sending messages, even if messages were turned off, since a non-synchronised script will execute here. (Aaargh!)
 		bool bMultiMessagesBackup = bMultiMessages;
 		bMultiMessages = bMultiPlayer;
 
 		clustObjectAttacked((BASE_OBJECT *)psObj);
+		triggerEventAttacked(psObj, g_pProjLastAttacker, lastHit);
 
 		bMultiMessages = bMultiMessagesBackup;
 	}
-
+	debug(LOG_ATTACK, "objDamage(%d): body %d armour %d damage: %d", psObj->id, psObj->body, armour, damage);
 
 	if (psObj->type == OBJ_DROID)
 	{
@@ -482,13 +488,10 @@ unsigned int objGuessFutureDamage(WEAPON_STATS *psStats, unsigned int player, BA
 		return 0;
 	}
 
-
 	// apply game difficulty setting
 	damage = modifyForDifficultyLevel(damage, psTarget->player != selectedPlayer);
 
 	armour = MAX(armour, psTarget->armour[psStats->weaponClass]);
-
-	//debug(LOG_ATTACK, "objGuessFutureDamage(%d): body %d armour %d damage: %d", psObj->id, psObj->body, armour, damage);
 
 	if (psTarget->type == OBJ_DROID)
 	{
@@ -497,6 +500,11 @@ unsigned int objGuessFutureDamage(WEAPON_STATS *psStats, unsigned int player, BA
 		// Retrieve highest, applicable, experience level
 		level = getDroidEffectiveLevel(psDroid);
 	}
+	else if (psTarget->type == OBJ_STRUCTURE && ((STRUCTURE *)psTarget)->status == SS_BEING_BUILT)
+	{
+		armour = 0;
+	}
+	//debug(LOG_ATTACK, "objGuessFutureDamage(%d): body %d armour %d damage: %d", psObj->id, psObj->body, armour, damage);
 
 	// Reduce damage taken by EXP_REDUCE_DAMAGE % for each experience level
 	actualDamage = (damage * (100 - EXP_REDUCE_DAMAGE * level)) / 100;

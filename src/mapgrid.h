@@ -40,6 +40,9 @@ extern void gridReset(void);
 /// Find all objects within radius. Call gridIterate() to get the search results.
 extern void gridStartIterate(int32_t x, int32_t y, uint32_t radius);
 
+/// Find all objects within radius. Call gridIterate() to get the search results.
+extern void gridStartIterateArea(int32_t x, int32_t y, uint32_t x2, uint32_t y2);
+
 // Isn't, but could be used by some cluster system. Don't really understand what cluster.c is for.
 /// Find all objects within radius where object->type == OBJ_DROID && object->player == player. Call gridIterate() to get the search results.
 extern void gridStartIterateDroidsByPlayer(int32_t x, int32_t y, uint32_t radius, int player);
@@ -49,9 +52,24 @@ extern void gridStartIterateDroidsByPlayer(int32_t x, int32_t y, uint32_t radius
 extern void gridStartIterateUnseen(int32_t x, int32_t y, uint32_t radius, int player);
 
 /// Get the next search result from gridStartIterate, or NULL if finished.
-static inline BASE_OBJECT *gridIterate(void)
+static inline BASE_OBJECT *gridIterate()
 {
-	return (BASE_OBJECT *)*gridIterator++;
+	BASE_OBJECT *ret = (BASE_OBJECT *)*gridIterator++;
+	if (ret == NULL)
+	{
+		gridIterator = NULL;  // Detect (by crashing in a reproducible way) if calling gridIterate() again before gridStartIterate().
+	}
+	return ret;
+}
+
+/// Saves the list returned by gridIterate(), so that future gridStartIterate() calls will not overwrite the list.
+static inline void gridGetIterateList(std::vector<BASE_OBJECT *> *list)
+{
+	list->clear();
+	for (BASE_OBJECT *psObj = gridIterate(); psObj != NULL; psObj = gridIterate())
+	{
+		list->push_back(psObj);
+	}
 }
 
 // Isn't, but could be used by some weird recursive calls in cluster.c.

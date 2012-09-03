@@ -216,8 +216,8 @@ void gameTimeUpdate(bool mayUpdate)
 		updateLatency();
 		if (crcError)
 		{
-			debug(LOG_ERROR, "Synch error, gameTimes were: {%s}", listToString("%10u", ", ", gameQueueCheckTime, gameQueueCheckTime + game.maxPlayers).c_str());
-			debug(LOG_ERROR, "Synch error, CRCs were:      {%s}", listToString("0x%08X", ", ", gameQueueCheckCrc, gameQueueCheckCrc + game.maxPlayers).c_str());
+			debug(LOG_ERROR, "Synch error, gameTimes were: {%s}", listToString("%7u", ", ", gameQueueCheckTime, gameQueueCheckTime + game.maxPlayers).c_str());
+			debug(LOG_ERROR, "Synch error, CRCs were:      {%s}", listToString(" 0x%04X", ", ", gameQueueCheckCrc, gameQueueCheckCrc + game.maxPlayers).c_str());
 			crcError = false;
 		}
 	}
@@ -362,7 +362,7 @@ void sendPlayerGameTime()
 	unsigned player;
 	uint32_t latencyTicks = discreteChosenLatency / GAME_TICKS_PER_UPDATE;
 	uint32_t checkTime = gameTime;
-	uint32_t checkCrc = nextDebugSync();
+	GameCrcType checkCrc = nextDebugSync();
 
 	for (player = 0; player < game.maxPlayers; ++player)
 	{
@@ -374,7 +374,7 @@ void sendPlayerGameTime()
 		NETbeginEncode(NETgameQueue(player), GAME_GAME_TIME);
 			NETuint32_t(&latencyTicks);
 			NETuint32_t(&checkTime);
-			NETuint32_tLarge(&checkCrc);
+			NETuint16_t(&checkCrc);
 			NETuint16_t(&wantedLatency);
 		NETend();
 	}
@@ -384,14 +384,16 @@ void recvPlayerGameTime(NETQUEUE queue)
 {
 	uint32_t latencyTicks = 0;
 	uint32_t checkTime = 0;
-	uint32_t checkCrc = 0;
+	GameCrcType checkCrc = 0;
 
 	NETbeginDecode(queue, GAME_GAME_TIME);
 		NETuint32_t(&latencyTicks);
 		NETuint32_t(&checkTime);
-		NETuint32_tLarge(&checkCrc);
+		NETuint16_t(&checkCrc);
 		NETuint16_t(&wantedLatencies[queue.index]);
 	NETend();
+
+	syncDebug("GAME_GAME_TIME p%d;lat%u,ct%u,crc%04X,wlat%u", queue.index, latencyTicks, checkTime, checkCrc, wantedLatencies[queue.index]);
 
 	gameQueueTime[queue.index] = checkTime + latencyTicks * GAME_TICKS_PER_UPDATE;  // gameTime when future messages shall be processed.
 

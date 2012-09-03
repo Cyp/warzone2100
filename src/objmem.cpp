@@ -92,7 +92,7 @@ void objmemShutdown(void)
 
 /* Remove an object from the destroyed list, finally freeing its memory
  * Hopefully by this time, no pointers still refer to it! */
-static void objmemDestroy(BASE_OBJECT *psObj)
+static bool objmemDestroy(BASE_OBJECT *psObj)
 {
 	switch (psObj->type)
 	{
@@ -100,7 +100,7 @@ static void objmemDestroy(BASE_OBJECT *psObj)
 			debug(LOG_MEMORY, "freeing droid at %p", psObj);
 			if (!droidCheckReferences((DROID *)psObj))
 			{
-				return;
+				return false;
 			}
 			break;
 
@@ -108,7 +108,7 @@ static void objmemDestroy(BASE_OBJECT *psObj)
 			debug(LOG_MEMORY, "freeing structure at %p", psObj);
 			if (!structureCheckReferences((STRUCTURE *)psObj))
 			{
-				return;
+				return false;
 			}
 			break;
 
@@ -121,6 +121,7 @@ static void objmemDestroy(BASE_OBJECT *psObj)
 	}
 	delete psObj;
 	debug(LOG_MEMORY, "BASE_OBJECT* 0x%p is freed.", psObj);
+	return true;
 }
 
 /* General housekeeping for the object system */
@@ -146,7 +147,14 @@ void objmemUpdate(void)
 	while (psDestroyedObj != NULL && psDestroyedObj->died <= gameTime - deltaGameTime)
 	{
 		psNext = psDestroyedObj->psNext;
-		objmemDestroy(psDestroyedObj);
+		if (!objmemDestroy(psDestroyedObj))
+		{
+			if (psDestroyedObj->type == OBJ_DROID)
+			{
+				debug(LOG_DEATH, "skipping %p (%s: id %u) this round, will try again later.", psDestroyedObj, ((DROID *)psDestroyedObj)->aName, ((DROID *)psDestroyedObj)->id);
+				return;
+			}
+		}
 		psDestroyedObj = psNext;
 	}
 
@@ -619,7 +627,7 @@ bool createFlagPosition(FLAG_POSITION **ppsNew, UDWORD player)
 {
 	ASSERT( player<MAX_PLAYERS, "createFlagPosition: invalid player number" );
 
-	*ppsNew = (FLAG_POSITION *)malloc(sizeof(FLAG_POSITION));
+	*ppsNew = (FLAG_POSITION *)calloc(1, sizeof(FLAG_POSITION));
 	if (*ppsNew == NULL)
 	{
 		debug(LOG_ERROR, "Out of memory");
@@ -652,7 +660,7 @@ void removeFlagPosition(FLAG_POSITION *psDel)
 	FLAG_POSITION		*psPrev=NULL, *psCurr;
 
 	ASSERT( psDel != NULL,
-		"removeFlagPosition: Invalid Flag Positionpointer" );
+		"removeFlagPosition: Invalid Flag Position pointer" );
 
 	if (apsFlagPosLists[psDel->player] == psDel)
 	{

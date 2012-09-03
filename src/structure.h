@@ -111,6 +111,7 @@ extern bool loadStructureStrengthModifiers(const char *pStrengthModData, UDWORD 
 extern bool	structureStatsShutDown(void);
 
 int requestOpenGate(STRUCTURE *psStructure);
+int gateCurrentOpenHeight(STRUCTURE const *psStructure, uint32_t time, int minimumStub);  ///< Returns how far open the gate is, or 0 if the structure is not a gate.
 
 int32_t structureDamage(STRUCTURE *psStructure, unsigned damage, WEAPON_CLASS weaponClass, WEAPON_SUBCLASS weaponSubClass, unsigned impactTime, bool isDamagePerSecond);
 extern void structureBuild(STRUCTURE *psStructure, DROID *psDroid, int buildPoints, int buildRate = 1);
@@ -181,9 +182,6 @@ extern bool checkStructureStatus( STRUCTURE_STATS *psStats, UDWORD player, UDWOR
 /*sets the point new droids go to - x/y in world coords for a Factory*/
 extern void setAssemblyPoint(FLAG_POSITION *psAssemblyPoint, UDWORD x, UDWORD y,
                              UDWORD player, bool bCheck);
-
-/* consider delivery points when selected by player*/
-extern void processDeliveryPoint(UDWORD player, UDWORD x, UDWORD y);
 
 /*called when a structure has been built - checks through the list of callbacks
 for the scripts*/

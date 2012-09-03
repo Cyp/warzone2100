@@ -26,6 +26,7 @@
 #ifndef _netplay_h
 #define _netplay_h
 
+#include "lib/framework/crc.h"
 #include "nettypes.h"
 #include <physfs.h>
 
@@ -99,7 +100,6 @@ enum MESSAGE_TYPES
 	GAME_TEMPLATEDEST,              ///< remove template
 	GAME_ALLIANCE,                  ///< alliance data.
 	GAME_GIFT,                      ///< a luvly gift between players.
-	GAME_ARTIFACTS,                 ///< artifacts randomly placed.
 	GAME_LASSAT,                    ///< lassat firing.
 	GAME_GAME_TIME,                 ///< Game time. Used for synchronising, so that all messages are executed at the same gameTime on all clients.
 	GAME_PLAYER_LEFT,               ///< Player has left or dropped.
@@ -241,6 +241,7 @@ struct PLAYER
 	bool		ready;			///< player ready to start?
 	int8_t		ai;			///< index into sorted list of AIs, zero is always default AI
 	int8_t		difficulty;		///< difficulty level of AI
+	bool		autoGame;		// if we are running a autogame (AI controls us)
 	bool		needFile;			///< if We need a file sent to us
 	WZFile		wzFile;				///< for each player, we keep track of map progress
 	char		IPtextAddress[40];	///< IP of this player
@@ -258,7 +259,8 @@ struct NETPLAY
 	bool		isHost;			///< True if we are hosting the game
 	bool		isUPNP;					// if we want the UPnP detection routines to run
 	bool		isHostAlive;	/// if the host is still alive
-	PHYSFS_file	*pMapFileHandle;
+	PHYSFS_file *   pMapFileHandle;         ///< Only non-NULL during map download.
+	char mapFileName[255];            ///< Only valid during map download.
 	char gamePassword[password_string_size];		//
 	bool GamePassworded;				// if we have a password or not.
 	bool ShowedMOTD;					// only want to show this once
@@ -286,12 +288,12 @@ extern char iptoconnect[PATH_MAX]; // holds IP/hostname from command line
 // ////////////////////////////////////////////////////////////////////////
 // functions available to you.
 extern int   NETinit(bool bFirstCall);				// init
-bool NETsend(uint8_t player, NetMessage const *message);                 ///< send to player, or broadcast if player == NET_ALL_PLAYERS.
+bool NETsend(NETQUEUE queue, NetMessage const *message);                 ///< send to player, or broadcast if player == NET_ALL_PLAYERS.
 extern bool NETrecvNet(NETQUEUE *queue, uint8_t *type);                  ///< recv a message from the net queues if possible.
 extern bool NETrecvGame(NETQUEUE *queue, uint8_t *type);                 ///< recv a message from the game queues which is sceduled to execute by time, if possible.
 void NETflush(void);                                                     ///< Flushes any data stuck in compression buffers.
 
-extern UBYTE   NETsendFile(char *fileName, UDWORD player);	// send file chunk.
+int NETsendFile(char *mapName, Sha256 const &fileHash, UDWORD player);  // send file chunk.
 extern UBYTE   NETrecvFile(NETQUEUE queue);                     // recv file chunk
 
 extern int NETclose(void);					// close current game
@@ -301,13 +303,8 @@ extern void NETaddRedirects(void);
 extern void NETremRedirects(void);
 extern void NETdiscoverUPnPDevices(void);
 
-extern UDWORD	NETgetBytesSent(void);				// return bytes sent/recv.  call regularly for good results
-extern UDWORD	NETgetPacketsSent(void);			// return packets sent/recv.  call regularly for good results
-extern UDWORD	NETgetBytesRecvd(void);				// return bytes sent/recv.  call regularly for good results
-extern UDWORD	NETgetPacketsRecvd(void);			// return packets sent/recv.  call regularly for good results
-extern UDWORD	NETgetRecentBytesSent(void);		// more immediate functions.
-extern UDWORD	NETgetRecentPacketsSent(void);
-extern UDWORD	NETgetRecentBytesRecvd(void);
+enum NetStatisticType {NetStatisticRawBytes, NetStatisticUncompressedBytes, NetStatisticPackets};
+unsigned NETgetStatistic(NetStatisticType type, bool sent, bool isTotal = false);     // Return some statistic. Call regularly for good results.
 
 extern void NETplayerKicked(UDWORD index);			// Cleanup after player has been kicked
 
@@ -356,9 +353,12 @@ void _syncDebug(const char *function, const char *str, ...)
 void _syncDebugIntList(const char *function, const char *str, int *ints, size_t numInts);
 #define syncDebugBacktrace() do { _syncDebugBacktrace(__FUNCTION__); } while(0)
 void _syncDebugBacktrace(const char *function);                  ///< Adds a backtrace to syncDebug, if the platform supports it. Can be a bit slow, don't call way too often, unless desperate.
+uint32_t syncDebugGetCrc();                                      ///< syncDebug() calls between uint32_t crc = syncDebugGetCrc(); and syncDebugSetCrc(crc); appear in synch debug logs, but without triggering a desynch if different.
+void syncDebugSetCrc(uint32_t crc);                              ///< syncDebug() calls between uint32_t crc = syncDebugGetCrc(); and syncDebugSetCrc(crc); appear in synch debug logs, but without triggering a desynch if different.
 
-void resetSyncDebug(void);                                       ///< Resets the syncDebug, so syncDebug from a previous game doesn't cause a spurious desynch dump.
-uint32_t nextDebugSync(void);                                    ///< Returns a CRC corresponding to all syncDebug() calls since the last nextDebugSync() or resetSyncDebug() call.
-bool checkDebugSync(uint32_t checkGameTime, uint32_t checkCrc);  ///< Dumps all syncDebug() calls from that gameTime, if the CRC doesn't match.
+typedef uint16_t GameCrcType;  // Truncate CRC of game state to 16 bits, to save a bit of bandwidth.
+void resetSyncDebug();                                              ///< Resets the syncDebug, so syncDebug from a previous game doesn't cause a spurious desynch dump.
+GameCrcType nextDebugSync();                                        ///< Returns a CRC corresponding to all syncDebug() calls since the last nextDebugSync() or resetSyncDebug() call.
+bool checkDebugSync(uint32_t checkGameTime, GameCrcType checkCrc);  ///< Dumps all syncDebug() calls from that gameTime, if the CRC doesn't match.
 
 #endif

@@ -36,8 +36,6 @@
 #include <QtCore/QSettings>
 #include <QtCore/QFile>
 
-// TODO -- parse and check that all setTimer, removeTimer and queue calls have quoted first parameters
-
 #define CUR_PLAYERS 4
 
 enum OBJECT_TYPE
@@ -72,7 +70,7 @@ static QList<timerNode> timers;
 
 // Pseudorandom values
 static int obj_uid = 11;
-#define MAX_PLAYERS 8
+#define MAX_PLAYERS 11
 
 #define ASSERT(_cond, ...) do { if (!_cond) qFatal(__VA_ARGS__); } while(0)
 
@@ -226,6 +224,10 @@ static QScriptValue js_enumLabels(QScriptContext *, QScriptEngine *)
 static QScriptValue js_label(QScriptContext *, QScriptEngine *engine)
 {
 	QScriptValue ret = engine->newObject();
+	ret.setProperty("x", 5);
+	ret.setProperty("y", 5);
+	ret.setProperty("x2", 15);
+	ret.setProperty("y2", 15);
 	return ret;
 }
 
@@ -368,6 +370,12 @@ static QScriptValue js_addDroid(QScriptContext *context, QScriptEngine *engine)
 	return QScriptValue(true);
 }
 
+static QScriptValue js_addFeature(QScriptContext *context, QScriptEngine *engine)
+{
+	ARG_STRING(2);
+	return QScriptValue(convFeature(engine));
+}
+
 static QScriptValue js_debug(QScriptContext *context, QScriptEngine *engine)
 {
 	return QScriptValue();
@@ -384,6 +392,18 @@ static QScriptValue js_removeStruct(QScriptContext *context, QScriptEngine *)
 {
 	ARG_COUNT_EXACT(1);
 	ARG_STRUCT(0);
+	fprintf(stderr, "removeStruct() is deprecated since version 3.2");
+	return QScriptValue(true);
+}
+
+static QScriptValue js_removeObject(QScriptContext *context, QScriptEngine *)
+{
+	ARG_COUNT_VAR(1, 2);
+	ARG_OBJ(0);
+	if (context->argumentCount() > 1)
+	{
+		ARG_BOOL(1);
+	}
 	return QScriptValue(true);
 }
 
@@ -622,6 +642,13 @@ static QScriptValue js_applyLimitSet(QScriptContext *context, QScriptEngine *eng
 	return QScriptValue();
 }
 
+static QScriptValue js_enableTemplate(QScriptContext *context, QScriptEngine *engine)
+{
+	ARG_COUNT_EXACT(1);
+	ARG_STRING(0);
+	return QScriptValue();
+}
+
 static QScriptValue js_enableComponent(QScriptContext *context, QScriptEngine *engine)
 {
 	ARG_COUNT_EXACT(2);
@@ -854,6 +881,24 @@ static QScriptValue js_isVTOL(QScriptContext *context, QScriptEngine *engine)
 	return QScriptValue(true);
 }
 
+static QScriptValue js_setAlliance(QScriptContext *context, QScriptEngine *engine)
+{
+	ARG_COUNT_EXACT(3);
+	ARG_PLAYER(0);
+	ARG_PLAYER(1);
+	ARG_BOOL(2);
+	return QScriptValue(true);
+}
+
+static QScriptValue js_setAssemblyPoint(QScriptContext *context, QScriptEngine *engine)
+{
+	ARG_COUNT_EXACT(3);
+	ARG_STRUCT(0);
+	ARG_NUMBER(1);
+	ARG_NUMBER(2);
+	return QScriptValue(true);
+}
+
 bool testPlayerScript(QString path, int player, int difficulty)
 {
 	QScriptEngine *engine = new QScriptEngine();
@@ -926,6 +971,7 @@ bool testPlayerScript(QString path, int player, int difficulty)
 	engine->globalObject().setProperty("orderDroid", engine->newFunction(js_orderDroid));
 	engine->globalObject().setProperty("buildDroid", engine->newFunction(js_buildDroid));
 	engine->globalObject().setProperty("addDroid", engine->newFunction(js_addDroid));
+	engine->globalObject().setProperty("addFeature", engine->newFunction(js_addFeature));
 	engine->globalObject().setProperty("componentAvailable", engine->newFunction(js_componentAvailable));
 	engine->globalObject().setProperty("isVTOL", engine->newFunction(js_isVTOL));
 	engine->globalObject().setProperty("safeDest", engine->newFunction(js_safeDest));
@@ -953,13 +999,17 @@ bool testPlayerScript(QString path, int player, int difficulty)
 	engine->globalObject().setProperty("enableStructure", engine->newFunction(js_enableStructure));
 	engine->globalObject().setProperty("makeComponentAvailable", engine->newFunction(js_makeComponentAvailable));
 	engine->globalObject().setProperty("enableComponent", engine->newFunction(js_enableComponent));
+	engine->globalObject().setProperty("enableTemplate", engine->newFunction(js_enableTemplate));
 	engine->globalObject().setProperty("allianceExistsBetween", engine->newFunction(js_allianceExistsBetween));
 	engine->globalObject().setProperty("removeStruct", engine->newFunction(js_removeStruct));
+	engine->globalObject().setProperty("removeObject", engine->newFunction(js_removeObject));
 	engine->globalObject().setProperty("setScrollParams", engine->newFunction(js_setScrollParams));
 	engine->globalObject().setProperty("addStructure", engine->newFunction(js_addStructure));
 	engine->globalObject().setProperty("loadLevel", engine->newFunction(js_loadLevel));
 	engine->globalObject().setProperty("setDroidExperience", engine->newFunction(js_setDroidExperience));
 	engine->globalObject().setProperty("setNoGoArea", engine->newFunction(js_setNoGoArea));
+	engine->globalObject().setProperty("setAlliance", engine->newFunction(js_setAlliance));
+	engine->globalObject().setProperty("setAssemblyPoint", engine->newFunction(js_setAssemblyPoint));
 
 	// Set some useful constants
 	engine->globalObject().setProperty("DORDER_ATTACK", 0, QScriptValue::ReadOnly | QScriptValue::Undeletable);
@@ -1040,6 +1090,8 @@ bool testPlayerScript(QString path, int player, int difficulty)
 		vector.setProperty("colour", 0, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		vector.setProperty("position", i, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		vector.setProperty("team", i, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		vector.setProperty("isAI", i != 0, QScriptValue::ReadOnly | QScriptValue::Undeletable);
+		vector.setProperty("isHuman", i == 0, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 		playerData.setProperty(i, vector, QScriptValue::ReadOnly | QScriptValue::Undeletable);
 	}
 	engine->globalObject().setProperty("playerData", playerData, QScriptValue::ReadOnly | QScriptValue::Undeletable);

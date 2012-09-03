@@ -27,6 +27,7 @@
 #include "lib/ivis_opengl/piepalette.h"
 #include "lib/ivis_opengl/piestate.h"
 #include "lib/ivis_opengl/piefunc.h"
+#include "lib/ivis_opengl/bitimage.h"
 #include "lib/gamelib/gtime.h"
 #include "advvis.h"
 #include "objects.h"
@@ -61,15 +62,15 @@ PIELIGHT clanColours[]=
 {	// see frontend2.png for team color order.
 	// [r,g,b,a]
 	{{0,255,0,255}},		// green  Player 0
-	{{255,210,40,255}},		// orange Player 1
+	{{255,192,40,255}},             // orange Player 1
 	{{255,255,255,255}},	// grey   Player 2
 	{{0,0,0,255}},			// black  Player 3
 	{{255,0,0,255}},		// red    Player 4
 	{{20,20,255,255}},		// blue   Player 5
-	{{255,0,255,255}},		// pink   Player 6 (called purple in palette.txt)
+	{{255,0,192,255}},              // pink   Player 6
 	{{0,255,255,255}},		// cyan   Player 7
 	{{255,255,0,255}},              // yellow Player 8
-	{{192,0,255,255}},              // pink   Player 9
+	{{144,0,255,255}},              // purple Player 9
 	{{200,255,255,255}},            // white  Player A (Should be brighter than grey, but grey is already maximum.)
 	{{128,128,255,255}},            // bright blue Player B
 	{{128,255,128,255}},            // neon green  Player C
@@ -326,7 +327,7 @@ void drawRadar(void)
 
 static void DrawNorth(void)
 {
-	iV_DrawImage(IntImages, RADAR_NORTH, -((radarWidth / 2.0) + (IntImages->ImageDefs[RADAR_NORTH].Width) + 1) , -(radarHeight / 2.0));
+	iV_DrawImage(IntImages, RADAR_NORTH, -((radarWidth / 2.0) + iV_GetImageWidth(IntImages, RADAR_NORTH) + 1), -(radarHeight / 2.0));
 }
 
 static PIELIGHT appliedRadarColour(RADAR_DRAW_MODE radarDrawMode, MAPTILE *WTile)

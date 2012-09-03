@@ -56,8 +56,9 @@
 #include "multiplay.h"
 #include "multigifts.h"
 #include "random.h"
-
+#include "mission.h"
 #include "drive.h"
+#include "qtscript.h"
 
 /* max and min vtol heights above terrain */
 #define	VTOL_HEIGHT_MIN				250
@@ -100,18 +101,11 @@
 #define BLOCK_DIST		64
 // How far a droid has to rotate before it is no longer 'stationary'
 #define BLOCK_DIR		90
-// The min and max ratios of target/obstruction distances for an obstruction
-// to be on the target
-#define BLOCK_MINRATIO	99.f / 100.f
-#define BLOCK_MAXRATIO	101.f / 100.f
-// The result of the dot product for two vectors to be the same direction
-#define BLOCK_DOTVAL	99.f / 100.f
 
 // How far out from an obstruction to start avoiding it
 #define AVOID_DIST		(TILE_UNITS*2)
 
-// maximum and minimum speed to approach a final way point
-#define MAX_END_SPEED		300
+// Speed to approach a final way point, if possible.
 #define MIN_END_SPEED		60
 
 // distance from final way point to start slowing
@@ -124,53 +118,6 @@
 #define SHUFFLE_DIST		(3*TILE_UNITS/2)
 // how far to move for a shuffle
 #define SHUFFLE_MOVE		(2*TILE_UNITS/2)
-
-/***********************************************************************************/
-/*             Tracked model defines                                               */
-
-// The magnitude of direction change required for a droid to spin on the spot
-#define TRACKED_SPIN_ANGLE              DEG(45)
-// How fast a tracked droid accelerates
-#define TRACKED_ACCEL			250
-// How fast a tracked droid decelerates
-#define TRACKED_DECEL			800
-// How fast a tracked droid decelerates
-#define TRACKED_SKID_DECEL		600
-// How fast a wheeled droid decelerates
-#define WHEELED_SKID_DECEL		350
-// How fast a hover droid decelerates
-#define HOVER_SKID_DECEL		120
-
-/************************************************************************************/
-/*             Person model defines                                                 */
-
-// The magnitude of direction change required for a person to spin on the spot
-#define PERSON_SPIN_ANGLE               DEG(45)
-// The speed at which people spin
-#define PERSON_SPIN_SPEED		DEG(500)
-// The speed at which people turn while going forward
-#define PERSON_TURN_SPEED		DEG(250)
-// How fast a person accelerates
-#define PERSON_ACCEL			250
-// How fast a person decelerates
-#define PERSON_DECEL			450
-
-
-/************************************************************************************/
-/*             VTOL model defines                                                 */
-
-// The magnitude of direction change required for a vtol to spin on the spot
-#define VTOL_SPIN_ANGLE                 DEG(180)
-// The speed at which vtols spin (zero means can't spin)
-#define VTOL_SPIN_SPEED                 DEG(200)
-// The minimum speed at which vtols turn while going forward
-#define VTOL_TURN_SPEED			DEG(100)
-// How fast vtols accelerate
-#define VTOL_ACCEL				200
-// How fast vtols decelerate
-#define VTOL_DECEL				200
-// How fast vtols 'skid'
-#define VTOL_SKID_DECEL			600
 
 /// Extra precision added to movement calculations.
 #define EXTRA_BITS                              8
@@ -530,13 +477,14 @@ struct BLOCKING_CALLBACK_DATA
 {
 	PROPULSION_TYPE propulsionType;
 	bool blocking;
+	Vector2i src;
 	Vector2i dst;
 };
 
 static bool moveBlockingTileCallback(Vector2i pos, int32_t dist, void *data_)
 {
 	BLOCKING_CALLBACK_DATA *data = (BLOCKING_CALLBACK_DATA *)data_;
-	data->blocking |= pos != data->dst && fpathBlockingTile(map_coord(pos.x), map_coord(pos.y), data->propulsionType);
+	data->blocking |= pos != data->src && pos != data->dst && fpathBlockingTile(map_coord(pos.x), map_coord(pos.y), data->propulsionType);
 	return !data->blocking;
 }
 
@@ -550,6 +498,7 @@ static int32_t moveDirectPathToWaypoint(DROID *psDroid, unsigned positionIndex)
 	BLOCKING_CALLBACK_DATA data;
 	data.propulsionType = getPropulsionStats(psDroid)->propulsionType;
 	data.blocking = false;
+	data.src = src;
 	data.dst = dst;
 	rayCast(src, dst, &moveBlockingTileCallback, &data);
 	return data.blocking? -1 - dist : dist;
@@ -1108,7 +1057,6 @@ static void moveCalcBlockingSlide(DROID *psDroid, int32_t *pmx, int32_t *pmy, ui
 static void moveCalcDroidSlide(DROID *psDroid, int *pmx, int *pmy)
 {
 	int32_t		droidR, rad, radSq, objR, xdiff, ydiff, distSq, spmx, spmy;
-	BASE_OBJECT     *psObj, *psObst;
 	bool            bLegs;
 
 	CHECK_DROID(psDroid);
@@ -1122,10 +1070,17 @@ static void moveCalcDroidSlide(DROID *psDroid, int *pmx, int *pmy)
 	spmy = gameTimeAdjustedAverage(*pmy, EXTRA_PRECISION);
 
 	droidR = moveObjRadius((BASE_OBJECT *)psDroid);
-	psObst = NULL;
+	BASE_OBJECT *psObst = NULL;
 	gridStartIterate(psDroid->pos.x, psDroid->pos.y, OBJ_MAXRADIUS);
-	for (psObj = gridIterate(); psObj != NULL; psObj = gridIterate())
+	static std::vector<BASE_OBJECT *> list;  // static to avoid allocations.
+	gridGetIterateList(&list);
+	for (std::vector<BASE_OBJECT *>::const_iterator gi = list.begin(); gi != list.end(); ++gi)
 	{
+		BASE_OBJECT *psObj = *gi;
+		if (psObj->died)
+		{
+			continue;
+		}
 		if (psObj->type == OBJ_DROID)
 		{
 			if (((DROID *)psObj)->droidType == DROID_TRANSPORTER || ((DROID *)psObj)->droidType == DROID_SUPERTRANSPORTER)
@@ -1285,7 +1240,7 @@ static Vector2i moveGetObstacleVector(DROID *psDroid, Vector2i dest)
 
 		// Find very approximate position of obstacle relative to us when we get close, based on our guesses.
 		Vector2i deltaDiff = iSinCosR(obstDirectionGuess, (int64_t)std::max(iHypot(diff) - totalRadius*2/3, 0)*obstSpeedGuess / ourMaxSpeed);
-		if (!fpathBlockingTile(psObstacle->pos.x + deltaDiff.x, psObstacle->pos.y + deltaDiff.y, obstaclePropStats->propulsionType))  // Don't assume obstacle can go through cliffs.
+		if (!fpathBlockingTile(map_coord(psObstacle->pos.x + deltaDiff.x), map_coord(psObstacle->pos.y + deltaDiff.y), obstaclePropStats->propulsionType))  // Don't assume obstacle can go through cliffs.
 		{
 			diff += deltaDiff;
 		}
@@ -1378,11 +1333,19 @@ SDWORD moveCalcDroidSpeed(DROID *psDroid)
 
 	CHECK_DROID(psDroid);
 
-	mapX = map_coord(psDroid->pos.x);
-	mapY = map_coord(psDroid->pos.y);
-	speed = calcDroidSpeed(psDroid->baseSpeed, terrainType(mapTile(mapX,mapY)),
-							  psDroid->asBits[COMP_PROPULSION].nStat,
-							  getDroidEffectiveLevel(psDroid));
+	// NOTE: This screws up since the transporter is offscreen still (on a mission!), and we are trying to find terrainType of a tile (that is offscreen!)
+	if (psDroid->droidType == DROID_TRANSPORTER && missionIsOffworld())
+	{
+		PROPULSION_STATS	*propulsion = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
+		speed = propulsion->maxSpeed;
+	}
+	else
+	{
+		mapX = map_coord(psDroid->pos.x);
+		mapY = map_coord(psDroid->pos.y);
+		speed = calcDroidSpeed(psDroid->baseSpeed, terrainType(mapTile(mapX,mapY)), psDroid->asBits[COMP_PROPULSION].nStat, getDroidEffectiveLevel(psDroid));
+	}
+
 
 	// now offset the speed for the slope of the droid
 	pitch = angleDelta(psDroid->rot.pitch);
@@ -1466,11 +1429,8 @@ static void moveUpdateDroidDirection(DROID *psDroid, SDWORD *pSpeed, uint16_t di
 // Calculate current speed perpendicular to droids direction
 static int moveCalcPerpSpeed(DROID *psDroid, uint16_t iDroidDir, SDWORD iSkidDecel)
 {
-	uint16_t        adiff;
-	int		perpSpeed;
-
-	adiff = angleDelta(iDroidDir - psDroid->sMove.moveDir);
-	perpSpeed = iSinR(adiff, psDroid->sMove.speed);
+	int adiff = angleDelta(iDroidDir - psDroid->sMove.moveDir);
+	int perpSpeed = iSinR(abs(adiff), psDroid->sMove.speed);
 
 	// decelerate the perpendicular speed
 	perpSpeed = MAX(0, perpSpeed - gameTimeAdjustedAverage(iSkidDecel));
@@ -1551,12 +1511,8 @@ static void moveGetDroidPosDiffs(DROID *psDroid, int32_t *pDX, int32_t *pDY)
 // see if the droid is close to the final way point
 static void moveCheckFinalWaypoint( DROID *psDroid, SDWORD *pSpeed )
 {
-	SDWORD		minEndSpeed = psDroid->baseSpeed/3;
-
-	if (minEndSpeed > MIN_END_SPEED)
-	{
-		minEndSpeed = MIN_END_SPEED;
-	}
+	int minEndSpeed = (*pSpeed + 2)/3;
+	minEndSpeed = std::min(minEndSpeed, MIN_END_SPEED);
 
 	// don't do this for VTOLs doing attack runs
 	if (isVtolDroid(psDroid) && (psDroid->action == DACTION_VTOLATTACK))
@@ -1564,16 +1520,14 @@ static void moveCheckFinalWaypoint( DROID *psDroid, SDWORD *pSpeed )
 		return;
 	}
 
-	if (*pSpeed > minEndSpeed &&
-		(psDroid->sMove.Status != MOVESHUFFLE) &&
-		psDroid->sMove.pathIndex == psDroid->sMove.numPoints)
+	if (psDroid->sMove.Status != MOVESHUFFLE &&
+	    psDroid->sMove.pathIndex == psDroid->sMove.numPoints)
 	{
 		Vector2i diff = removeZ(psDroid->pos) - psDroid->sMove.target;
 		int distSq = diff*diff;
 		if (distSq < END_SPEED_RANGE*END_SPEED_RANGE)
 		{
-			*pSpeed = (MAX_END_SPEED-minEndSpeed) * distSq
-						/ (END_SPEED_RANGE*END_SPEED_RANGE) + minEndSpeed;
+			*pSpeed = (*pSpeed - minEndSpeed) * distSq / (END_SPEED_RANGE*END_SPEED_RANGE) + minEndSpeed;
 		}
 	}
 }
@@ -1629,33 +1583,9 @@ static void moveUpdateGroundModel(DROID *psDroid, SDWORD speed, uint16_t directi
 	uint16_t                iDroidDir;
 	uint16_t                slideDir;
 	PROPULSION_STATS	*psPropStats;
-	int32_t                 spinSpeed, turnSpeed, spinAngle, skidDecel, dx, dy, bx, by;
+	int32_t                 spinSpeed, spinAngle, turnSpeed, dx, dy, bx, by;
 
 	CHECK_DROID(psDroid);
-
-	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
-	switch (psPropStats->propulsionType)
-	{
-	case PROPULSION_TYPE_HOVER:
-		spinSpeed = psDroid->baseSpeed * DEG(3)/4;
-		turnSpeed = psDroid->baseSpeed * DEG(1)/4;
-		spinAngle = DEG(180);
-		skidDecel = HOVER_SKID_DECEL;
-		break;
-	case PROPULSION_TYPE_WHEELED:
-		spinSpeed = psDroid->baseSpeed * DEG(3)/4;
-		turnSpeed = psDroid->baseSpeed * DEG(1)/3;
-		spinAngle = DEG(180);
-		skidDecel = WHEELED_SKID_DECEL;
-		break;
-	case PROPULSION_TYPE_TRACKED:
-	default:
-		spinSpeed = psDroid->baseSpeed * DEG(3)/4;
-		turnSpeed = psDroid->baseSpeed * DEG(1)/3;
-		spinAngle = TRACKED_SPIN_ANGLE;
-		skidDecel = TRACKED_SKID_DECEL;
-		break;
-	}
 
 	// nothing to do if the droid is stopped
 	if ( moveDroidStopped( psDroid, speed ) == true )
@@ -1663,14 +1593,17 @@ static void moveUpdateGroundModel(DROID *psDroid, SDWORD speed, uint16_t directi
 		return;
 	}
 
-	// Used to update some kind of weird neighbour list here.
+	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
+	spinSpeed = psDroid->baseSpeed * psPropStats->spinSpeed;
+	turnSpeed = psDroid->baseSpeed * psPropStats->turnSpeed;
+	spinAngle = DEG(psPropStats->spinAngle);
 
 	moveCheckFinalWaypoint( psDroid, &speed );
 
 	moveUpdateDroidDirection(psDroid, &speed, direction, spinAngle, spinSpeed, turnSpeed, &iDroidDir);
 
-	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, TRACKED_ACCEL, TRACKED_DECEL);
-	fPerpSpeed   = moveCalcPerpSpeed(psDroid, iDroidDir, skidDecel);
+	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, psPropStats->acceleration, psPropStats->deceleration);
+	fPerpSpeed   = moveCalcPerpSpeed(psDroid, iDroidDir, psPropStats->skidDeceleration);
 
 	moveCombineNormalAndPerpSpeeds(psDroid, fNormalSpeed, fPerpSpeed, iDroidDir);
 	moveGetDroidPosDiffs(psDroid, &dx, &dy);
@@ -1697,9 +1630,10 @@ static void moveUpdateGroundModel(DROID *psDroid, SDWORD speed, uint16_t directi
 static void moveUpdatePersonModel(DROID *psDroid, SDWORD speed, uint16_t direction)
 {
 	int			fPerpSpeed, fNormalSpeed;
-	int32_t			dx, dy;
+	int32_t                 spinSpeed, turnSpeed, dx, dy;
 	uint16_t                iDroidDir;
 	uint16_t                slideDir;
+	PROPULSION_STATS	*psPropStats;
 
 	CHECK_DROID(psDroid);
 
@@ -1741,11 +1675,13 @@ static void moveUpdatePersonModel(DROID *psDroid, SDWORD speed, uint16_t directi
 		return;
 	}
 
-	// Used to update some kind of weird neighbour list here.
+	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
+	spinSpeed = psDroid->baseSpeed * psPropStats->spinSpeed;
+	turnSpeed = psDroid->baseSpeed * psPropStats->turnSpeed;
 
-	moveUpdateDroidDirection(psDroid, &speed, direction, PERSON_SPIN_ANGLE, PERSON_SPIN_SPEED, PERSON_TURN_SPEED, &iDroidDir);
+	moveUpdateDroidDirection(psDroid, &speed, direction, DEG(psPropStats->spinAngle), spinSpeed, turnSpeed, &iDroidDir);
 
-	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, PERSON_ACCEL, PERSON_DECEL);
+	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, psPropStats->acceleration, psPropStats->deceleration);
 
 	/* people don't skid at the moment so set zero perpendicular speed */
 	fPerpSpeed = 0;
@@ -1853,8 +1789,9 @@ static void moveUpdateVtolModel(DROID *psDroid, SDWORD speed, uint16_t direction
 	int fPerpSpeed, fNormalSpeed;
 	uint16_t   iDroidDir;
 	uint16_t   slideDir;
-	int32_t iMapZ, iSpinSpeed, iTurnSpeed, dx, dy;
+	int32_t spinSpeed, turnSpeed, iMapZ, iSpinSpeed, iTurnSpeed, dx, dy;
 	uint16_t targetRoll;
+	PROPULSION_STATS	*psPropStats;
 
 	CHECK_DROID(psDroid);
 
@@ -1864,21 +1801,25 @@ static void moveUpdateVtolModel(DROID *psDroid, SDWORD speed, uint16_t direction
 		return;
 	}
 
+	psPropStats = asPropulsionStats + psDroid->asBits[COMP_PROPULSION].nStat;
+	spinSpeed = DEG(psPropStats->spinSpeed);
+	turnSpeed = DEG(psPropStats->turnSpeed);
+
 	moveCheckFinalWaypoint( psDroid, &speed );
 
 	if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
 	{
-		moveUpdateDroidDirection(psDroid, &speed, direction, VTOL_SPIN_ANGLE, VTOL_SPIN_SPEED, VTOL_TURN_SPEED, &iDroidDir);
+		moveUpdateDroidDirection(psDroid, &speed, direction, DEG(psPropStats->spinAngle), spinSpeed, turnSpeed, &iDroidDir);
 	}
 	else
 	{
-		iSpinSpeed = std::max<int>(psDroid->baseSpeed*DEG(1)/2, VTOL_SPIN_SPEED);
-		iTurnSpeed = std::max<int>(psDroid->baseSpeed*DEG(1)/8, VTOL_TURN_SPEED);
-		moveUpdateDroidDirection(psDroid, &speed, direction, VTOL_SPIN_ANGLE, iSpinSpeed, iTurnSpeed, &iDroidDir);
+		iSpinSpeed = std::max<int>(psDroid->baseSpeed*DEG(1)/2, spinSpeed);
+		iTurnSpeed = std::max<int>(psDroid->baseSpeed*DEG(1)/8, turnSpeed);
+		moveUpdateDroidDirection(psDroid, &speed, direction, DEG(psPropStats->spinAngle), iSpinSpeed, iTurnSpeed, &iDroidDir);
 	}
 
-	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, VTOL_ACCEL, VTOL_DECEL);
-	fPerpSpeed   = moveCalcPerpSpeed(psDroid, iDroidDir, VTOL_SKID_DECEL);
+	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, psPropStats->acceleration, psPropStats->deceleration);
+	fPerpSpeed   = moveCalcPerpSpeed(psDroid, iDroidDir, psPropStats->skidDeceleration);
 
 	moveCombineNormalAndPerpSpeeds(psDroid, fNormalSpeed, fPerpSpeed, iDroidDir);
 
@@ -1949,11 +1890,11 @@ static void moveUpdateJumpCyborgModel(DROID *psDroid, SDWORD speed, uint16_t dir
 		return;
 	}
 
-	// Used to update some kind of weird neighbour list here.
+	// FIXME, fix hardcoded values -- or remove this mis-feature
 
-	moveUpdateDroidDirection(psDroid, &speed, direction, VTOL_SPIN_ANGLE, psDroid->baseSpeed*DEG(1), psDroid->baseSpeed*DEG(1)/3, &iDroidDir);
+	moveUpdateDroidDirection(psDroid, &speed, direction, DEG(180), psDroid->baseSpeed*DEG(1), psDroid->baseSpeed*DEG(1)/3, &iDroidDir);
 
-	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, VTOL_ACCEL, VTOL_DECEL);
+	fNormalSpeed = moveCalcNormalSpeed(psDroid, speed, iDroidDir, 200, 200);
 	fPerpSpeed   = 0;
 	moveCombineNormalAndPerpSpeeds(psDroid, fNormalSpeed, fPerpSpeed, iDroidDir);
 
@@ -2279,9 +2220,8 @@ static bool pickupOilDrum(int toPlayer, int fromPlayer)
 		CONPRINTF(ConsoleString, (ConsoleString, _("You found %u power in an oil drum."), OILDRUM_POWER));
 	}
 
-	// TODO This code is weird. When should new oil drums actually be added?
 	// fromPlayer == ANYPLAYER seems to mean that the drum was not pre-placed on the map.
-	if (bMultiPlayer && fromPlayer == ANYPLAYER && toPlayer == selectedPlayer)
+	if (bMultiPlayer && fromPlayer == ANYPLAYER)
 	{
 		// when player finds oil, we init the timer, and flag that we need a drum
 		if (!oilTimer)
@@ -2321,9 +2261,11 @@ static void checkLocalFeatures(DROID *psDroid)
 			{
 				case FEAT_OIL_DRUM:
 					pickedUp = pickupOilDrum(psDroid->player, psObj->player);
+					triggerEventPickup((FEATURE *)psObj, psDroid);
 					break;
 				case FEAT_GEN_ARTE:
 					pickedUp = pickupArtefact(psDroid->player, psObj->player);
+					triggerEventPickup((FEATURE *)psObj, psDroid);
 					break;
 				default:
 					break;
@@ -2484,6 +2426,7 @@ void moveUpdateDroid(DROID *psDroid)
 					// check the location for vtols
 					Vector2i tar = removeZ(psDroid->pos);
 					if (psDroid->order.type != DORDER_PATROL && psDroid->order.type != DORDER_CIRCLE  // Not doing an order which means we never land (which means we might want to land).
+					    && psDroid->action != DACTION_MOVETOREARM && psDroid->action != DACTION_MOVETOREARMPOINT
 					    && actionVTOLLandingPos(psDroid, &tar)  // Can find a sensible place to land.
 					    && map_coord(tar) != map_coord(psDroid->sMove.destination))  // We're not at the right place to land.
 					{

@@ -37,6 +37,8 @@
  */
 
 static bool shadersAvailable = false;
+static bool shaderUsage = false;
+static bool fallbackAvailable = true;
 static GLuint shaderProgram[SHADER_MAX];
 static GLfloat shaderStretch = 0;
 static GLint locTeam, locStretch, locTCMask, locFog, locNormalMap, locSpecularMap, locEcm, locTime, locTangent = 0;
@@ -137,6 +139,29 @@ bool pie_GetShaderAvailability(void)
 void pie_SetShaderAvailability(bool availability)
 {
 	shadersAvailable = availability;
+}
+
+bool pie_GetFallbackAvailability(void)
+{
+	return fallbackAvailable;
+}
+
+void pie_SetFallbackAvailability(bool availability)
+{
+	fallbackAvailable = availability;
+}
+
+bool pie_GetShaderUsage(void)
+{
+	return shaderUsage;
+}
+
+void pie_SetShaderUsage(bool usage)
+{
+	bool valid = !usage && pie_GetFallbackAvailability();
+	valid = valid || (usage && pie_GetShaderAvailability());
+	if (valid)
+		shaderUsage = usage;
 }
 
 // Read shader into text buffer
@@ -402,10 +427,12 @@ void pie_ActivateFallback(SHADER_MODE, iIMDShape* shape, PIELIGHT teamcolour, PI
 	glTexEnvi(GL_TEXTURE_ENV, GL_SOURCE0_ALPHA,		GL_PREVIOUS);
 	glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_ALPHA,	GL_SRC_ALPHA);
 
-	glEnable(GL_BLEND);
-	glBlendFunc(GL_CONSTANT_COLOR, GL_ZERO);
-	glBlendColor(colour.byte.r / 255.0, colour.byte.g / 255.0,
-				colour.byte.b / 255.0, colour.byte.a / 255.0);
+	if (GLEW_ARB_imaging || GLEW_EXT_blend_color)
+	{
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_CONSTANT_COLOR, GL_ZERO);
+		glBlendColor(colour.byte.r / 255.0, colour.byte.g / 255.0, colour.byte.b / 255.0, colour.byte.a / 255.0);
+	}
 
 	glActiveTexture(GL_TEXTURE0);
 }

@@ -62,7 +62,7 @@
 static void		recvGiftDroids					(uint8_t from, uint8_t to, uint32_t droidID);
 static void		sendGiftDroids					(uint8_t from, uint8_t to);
 static void		giftResearch					(uint8_t from, uint8_t to, bool send);
-
+static void	giftAutoGame(uint8_t from, uint8_t to, bool send);
 ///////////////////////////////////////////////////////////////////////////////
 // gifts..
 
@@ -78,6 +78,13 @@ bool recvGift(NETQUEUE queue)
 		NETuint8_t(&to);
 		NETuint32_t(&droidID);
 	NETend();
+
+	if (!canGiveOrdersFor(queue.index, from))
+	{
+		debug(LOG_WARNING, "Gift (%d) from %d, to %d, queue.index %d", (int)type, (int)from, (int)to, (int)queue.index);
+		syncDebug("Wrong player.");
+		return false;
+	}
 
 	// Handle the gift depending on what it is
 	switch (type)
@@ -97,6 +104,10 @@ bool recvGift(NETQUEUE queue)
 		case POWER_GIFT:
 			audioTrack = ID_POWER_TRANSMIT;
 			giftPower(from, to, droidID, false);
+			break;
+		case AUTOGAME_GIFT:
+			audioTrack = ID_SOUND_NEXUS_SYNAPTIC_LINK;
+			giftAutoGame(from, to, false);
 			break;
 		default:
 			debug(LOG_ERROR, "recvGift: Unknown Gift recvd");
@@ -134,6 +145,10 @@ bool sendGift(uint8_t type, uint8_t to)
 			audioTrack = ID_POWER_TRANSMIT;
 			giftPower(selectedPlayer, to, 0, true);
 			break;
+		case AUTOGAME_GIFT:
+			giftAutoGame(selectedPlayer, to, true);
+			return true;
+			break;
 		default:
 			debug( LOG_ERROR, "Unknown Gift sent" );
 
@@ -146,6 +161,35 @@ bool sendGift(uint8_t type, uint8_t to)
 
 	return true;
 }
+
+static void giftAutoGame(uint8_t from, uint8_t to, bool send)
+{
+	uint32_t dummy = 0;
+
+	if (send)
+	{
+		uint8_t subType = AUTOGAME_GIFT;
+
+		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_GIFT);
+			NETuint8_t(&subType);
+			NETuint8_t(&from);
+			NETuint8_t(&to);
+			NETuint32_t(&dummy);
+		NETend();
+		debug(LOG_SYNC, "We (%d) are telling %d we want to enable/disable a autogame", from, to);
+	}
+	// If we are recieving the "gift"
+	else
+	{
+		if (to == selectedPlayer)
+		{
+			NetPlay.players[from].autoGame = !NetPlay.players[from].autoGame ;
+			CONPRINTF(ConsoleString, (ConsoleString, "%s has %s the autoGame command", getPlayerName(from), NetPlay.players[from].autoGame ? "Enabled" : "Disabled"));
+			debug(LOG_SYNC, "We (%d) are being told that %d has %s autogame", selectedPlayer, from, NetPlay.players[from].autoGame ? "Enabled" : "Disabled");
+		}
+	}
+}
+
 
 // ////////////////////////////////////////////////////////////////////////////
 // give radar information
@@ -490,6 +534,11 @@ bool recvAlliance(NETQUEUE queue, bool allowAudio)
 		NETint32_t(&value);
 	NETend();
 
+	if (!canGiveOrdersFor(queue.index, from))
+	{
+		return false;
+	}
+
 	switch (state)
 	{
 		case ALLIANCE_NULL:
@@ -517,41 +566,42 @@ bool recvAlliance(NETQUEUE queue, bool allowAudio)
 // add an artifact on destruction if required.
 void  technologyGiveAway(const STRUCTURE *pS)
 {
-	uint8_t			count = 1;
-	FEATURE_TYPE	type = FEAT_GEN_ARTE;
-
 	// If a fully built factory (or with modules under construction) which is our responsibility got destroyed
-	if (pS->pStructureType->type == REF_FACTORY && (pS->status == SS_BUILT || pS->currentBuildPts >= pS->body)
-	 && myResponsibility(pS->player))
+	if (pS->pStructureType->type == REF_FACTORY && (pS->status == SS_BUILT || pS->currentBuildPts >= pS->body))
 	{
-		uint32_t x = map_coord(pS->pos.x);
-		uint32_t y = map_coord(pS->pos.y);
-		uint32_t id = generateNewObjectId();
-
-		// Pick a tile to place the artifact
-		if (!pickATileGen(&x, &y, LOOK_FOR_EMPTY_TILE, zonedPAT))
-		{
-			ASSERT(false, "technologyGiveAway: Unable to find a free location");
-		}
-
-		NETbeginEncode(NETgameQueue(selectedPlayer), GAME_ARTIFACTS);
-		{
-			/* Make sure that we don't have to violate the constness of pS.
-			 * Since the nettype functions aren't const correct when sending
-			 */
-			uint8_t player = pS->player;
-
-			NETuint8_t(&count);
-			NETenum(&type);
-			NETuint32_t(&x);
-			NETuint32_t(&y);
-			NETuint32_t(&id);
-			NETuint8_t(&player);
-		}
-		NETend();
+		syncDebug("Adding artefact.");
+	}
+	else
+	{
+		syncDebug("Not adding artefact.");
+		return;
 	}
 
-	return;
+	int featureIndex;
+	for (featureIndex = 0; featureIndex < numFeatureStats && asFeatureStats[featureIndex].subType != FEAT_GEN_ARTE; ++featureIndex) {}
+	if (featureIndex >= numFeatureStats)
+	{
+		debug(LOG_WARNING, "No artefact feature!");
+		return;
+	}
+
+	uint32_t x = map_coord(pS->pos.x), y = map_coord(pS->pos.y);
+	if (!pickATileGen(&x, &y, LOOK_FOR_EMPTY_TILE, zonedPAT))
+	{
+		syncDebug("Did not find location for oil drum.");
+		debug(LOG_FEATURE, "Unable to find a free location.");
+		return;
+	}
+	FEATURE *pF = buildFeature(&asFeatureStats[featureIndex], world_coord(x), world_coord(y), false);
+	if (pF)
+	{
+		pF->player = pS->player;
+		syncDebugFeature(pF, '+');
+	}
+	else
+	{
+		debug(LOG_ERROR, "Couldn't build artefact?");
+	}
 }
 
 /** Sends a build order for the given feature type to all players
@@ -604,132 +654,52 @@ void recvMultiPlayerFeature(NETQUEUE queue)
 		}
 	}
 }
-// must match _feature_type in featuredef.h
-static const char *feature_names[] =
-{
-	"FEAT_UNUSED",
-	"FEAT_HOVER",
-	"FEAT_TANK",
-	"FEAT_GEN_ARTE",
-	"FEAT_OIL_RESOURCE",
-	"FEAT_BOULDER",
-	"FEAT_VEHICLE",
-	"FEAT_BUILDING",
-	"FEAT_UNUSED",
-	"FEAT_LOS_OBJ",
-	"FEAT_OIL_DRUM",
-	"FEAT_TREE",
-	"FEAT_SKYSCRAPER",
-};
-///////////////////////////////////////////////////////////////////////////////
-// splatter artifact gifts randomly about.
-void  addMultiPlayerRandomArtifacts(uint8_t quantity, FEATURE_TYPE type)
-{
-	int             i, count;
-	uint32_t	x, y;
-	uint8_t		player = ANYPLAYER;
 
-	debug(LOG_FEATURE, "Sending %u artifact(s) type: (%s)", quantity, feature_names[type]);
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_ARTIFACTS);
-		NETuint8_t(&quantity);
-		NETenum(&type);
-
-		ASSERT(mapWidth > 20, "map not big enough");
-		ASSERT(mapHeight > 20, "map not big enough");
-
-		for (count = 0; count < quantity; count++)
-		{
-			uint32_t id = generateNewObjectId();
-
-			for (i = 0; i < 3; i++) // try three times
-			{
-				// Between 10 and mapwidth - 10
-				x = (rand()%(mapWidth - 20)) + 10;
-				y = (rand()%(mapHeight - 20)) + 10;
-
-				if (pickATileGen(&x, &y, LOOK_FOR_EMPTY_TILE, zonedPAT))
-				{
-					break;
-				}
-				else if (i == 2)
-				{
-					debug(LOG_FEATURE, "Unable to find a free location after 3 tries; giving up.");
-					x = INVALID_XY;
-				}
-			}
-
-			NETuint32_t(&x);
-			NETuint32_t(&y);
-			NETuint32_t(&id);
-			NETuint8_t(&player);
-		}
-
-	NETend();
-}
-
-// ///////////////////////////////////////////////////////////////
 bool addOilDrum(uint8_t count)
 {
-	addMultiPlayerRandomArtifacts(count, FEAT_OIL_DRUM);
-	return true;
-}
+	syncDebug("Adding %d oil drums.", count);
 
-// ///////////////////////////////////////////////////////////////
-// receive splattered artifacts
-void recvMultiPlayerRandomArtifacts(NETQUEUE queue)
-{
-	int				count, i;
-	uint8_t			quantity, player;
-	uint32_t		tx,ty;
-	uint32_t		ref;
-	FEATURE_TYPE            type = FEAT_TREE;  // Dummy initialisation.
-	FEATURE 		*pF;
-
-	NETbeginDecode(queue, GAME_ARTIFACTS);
-		NETuint8_t(&quantity);
-		NETenum(&type);
-
-	debug(LOG_FEATURE, "receiving %u artifact(s) type: (%s)", quantity, feature_names[type]);
-	for (i = 0; i < numFeatureStats && asFeatureStats[i].subType != type; i++) {}
-
-	for (count = 0; count < quantity; count++)
+	int featureIndex;
+	for (featureIndex = 0; featureIndex < numFeatureStats && asFeatureStats[featureIndex].subType != FEAT_OIL_DRUM; ++featureIndex) {}
+	if (featureIndex >= numFeatureStats)
 	{
-		MAPTILE *psTile;
+		debug(LOG_WARNING, "No oil drum feature!");
+		return false;  // Return value ignored.
+	}
 
-		NETuint32_t(&tx);
-		NETuint32_t(&ty);
-		NETuint32_t(&ref);
-		NETuint8_t(&player);
-
-		if (tx == INVALID_XY)
+	for (unsigned n = 0; n < count; ++n)
+	{
+		uint32_t x, y;
+		for (int i = 0; i < 3; ++i)  // try three times
 		{
+			// Between 10 and mapwidth - 10
+			x = gameRand(mapWidth - 20) + 10;
+			y = gameRand(mapHeight - 20) + 10;
+
+			if (pickATileGen(&x, &y, LOOK_FOR_EMPTY_TILE, zonedPAT))
+			{
+				break;
+			}
+			x = INVALID_XY;
+		}
+		if (x == INVALID_XY)
+		{
+			syncDebug("Did not find location for oil drum.");
+			debug(LOG_FEATURE, "Unable to find a free location.");
 			continue;
 		}
-		else if (!tileOnMap(tx, ty))
-		{
-			debug(LOG_ERROR, "Bad tile coordinates (%u,%u)", tx, ty);
-			continue;
-		}
-		psTile = mapTile(tx, ty);
-		if (!psTile || psTile->psObject != NULL)
-		{
-			debug(LOG_ERROR, "Already something at (%u,%u)!", tx, ty);
-			continue;
-		}
-
-		pF = buildFeature((asFeatureStats + i), world_coord(tx), world_coord(ty), false);
+		FEATURE *pF = buildFeature(&asFeatureStats[featureIndex], world_coord(x), world_coord(y), false);
 		if (pF)
 		{
-			pF->id		= ref;
-			pF->player	= player;
+			pF->player = ANYPLAYER;
 			syncDebugFeature(pF, '+');
 		}
 		else
 		{
-			debug(LOG_ERROR, "Couldn't build feature %u for player %u ?", ref, player);
+			debug(LOG_ERROR, "Couldn't build oil drum?");
 		}
 	}
-	NETend();
+	return true;
 }
 
 // ///////////////////////////////////////////////////////////////
@@ -760,7 +730,10 @@ bool pickupArtefact(int toPlayer, int fromPlayer)
 			}
 		}
 
-		audio_QueueTrack(ID_SOUND_ARTIFACT_RECOVERED);
+		if (toPlayer == selectedPlayer)
+		{
+			audio_QueueTrack(ID_SOUND_ARTIFACT_RECOVERED);
+		}
 
 		return true;
 	}

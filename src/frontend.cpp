@@ -33,6 +33,7 @@
 #include "lib/framework/input.h"
 #include "lib/ivis_opengl/bitimage.h"
 #include "lib/ivis_opengl/pieblitfunc.h"
+#include "lib/ivis_opengl/piestate.h"
 #include "lib/sound/mixer.h"
 #include "lib/widget/button.h"
 #include "lib/widget/label.h"
@@ -113,7 +114,7 @@ static bool startTitleMenu(void)
 	addTextButton(FRONTEND_QUIT, FRONTEND_POS7X, FRONTEND_POS7Y, _("Quit Game"), WBUT_TXTCENTRE);
 	addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("MAIN MENU"));
 
-	addSmallTextButton(FRONTEND_HYPERLINK, FRONTEND_POS8X, FRONTEND_POS8Y, _("Visit our official site: http://wz2100.net"), 0);
+	addSmallTextButton(FRONTEND_HYPERLINK, FRONTEND_POS8X, FRONTEND_POS8Y, _("Warzone 2100 is completely free and open source (FLOSS). Official site: http://wz2100.net/"), 0);
 
 	return true;
 }
@@ -207,6 +208,7 @@ bool runTutorialMenu(void)
 			break;
 
 		case FRONTEND_FASTPLAY:
+			NETinit(true);
 			NetPlay.players[0].allocated = true;
 			game.skDiff[0] = UBYTE_MAX;
 			sstrcpy(aLevelName, "FASTPLAY");
@@ -244,10 +246,16 @@ static void startSinglePlayerMenu(void)
 	addTextButton(FRONTEND_NEWGAME,  FRONTEND_POS2X,FRONTEND_POS2Y,_("New Campaign") , WBUT_TXTCENTRE);
 	addTextButton(FRONTEND_SKIRMISH, FRONTEND_POS3X,FRONTEND_POS3Y, _("Start Skirmish Game"), WBUT_TXTCENTRE);
 	addTextButton(FRONTEND_CHALLENGES, FRONTEND_POS4X, FRONTEND_POS4Y, _("Challenges"), WBUT_TXTCENTRE);
-	addTextButton(FRONTEND_LOADGAME, FRONTEND_POS5X,FRONTEND_POS5Y, _("Load Game"), WBUT_TXTCENTRE);
+	addTextButton(FRONTEND_LOADGAME_MISSION, FRONTEND_POS5X,FRONTEND_POS5Y, _("Load Campaign Game"), WBUT_TXTCENTRE);
+	addTextButton(FRONTEND_LOADGAME_SKIRMISH, FRONTEND_POS6X,FRONTEND_POS6Y, _("Load Skirmish Game"), WBUT_TXTCENTRE);
 
 	addSideText	 (FRONTEND_SIDETEXT ,FRONTEND_SIDEX,FRONTEND_SIDEY,_("SINGLE PLAYER"));
 	addMultiBut(psWScreen, FRONTEND_BOTFORM, FRONTEND_QUIT, 10, 10, 30, 29, P_("menu", "Return"), IMAGE_RETURN, IMAGE_RETURN_HI, IMAGE_RETURN_HI);
+	// show this only when the video sequences are not installed
+	if (!PHYSFS_exists("sequences/devastation.ogg"))
+	{
+		addSmallTextButton(FRONTEND_HYPERLINK, FRONTEND_POS1X, FRONTEND_POS7Y + 12, _("Campaign videos are missing! Get them from http://wz2100.net"), 0);
+	}
 }
 
 static void frontEndNewGame( void )
@@ -273,12 +281,15 @@ static void SPinit(void)
 {
 	uint8_t playercolor;
 
+	// clear out the skDiff array
+	memset(game.skDiff, 0x0, sizeof(game.skDiff));
 	NetPlay.bComms = false;
 	bMultiPlayer = false;
 	bMultiMessages = false;
 	game.type = CAMPAIGN;
 	NET_InitPlayers();
 	NetPlay.players[0].allocated = true;
+	NetPlay.players[0].autoGame = false;
 	game.skDiff[0] = UBYTE_MAX;
 	game.maxPlayers = MAX_PLAYERS;
 	// make sure we have a valid color choice for our SP game. Valid values are 0, 4-7
@@ -289,6 +300,7 @@ static void SPinit(void)
 		playercolor = 0;	// default is green
 	}
 	setPlayerColour(0, playercolor);
+	game.hash.setZero();	// must reset this to zero
 }
 
 bool runSinglePlayerMenu(void)
@@ -317,9 +329,15 @@ bool runSinglePlayerMenu(void)
 				frontEndNewGame();
 				break;
 
-			case FRONTEND_LOADGAME:
+			case FRONTEND_LOADGAME_MISSION:
 				SPinit();
-				addLoadSave(LOAD_FRONTEND, _("Load Saved Game"));	// change mode when loadsave returns
+				addLoadSave(LOAD_FRONTEND_MISSION, _("Load Campaign Saved Game"));	// change mode when loadsave returns
+				break;
+
+			case FRONTEND_LOADGAME_SKIRMISH:
+				SPinit();
+				bMultiPlayer = true;
+				addLoadSave(LOAD_FRONTEND_SKIRMISH, _("Load Skirmish Saved Game"));	// change mode when loadsave returns
 				break;
 
 			case FRONTEND_SKIRMISH:
@@ -400,11 +418,13 @@ bool runMultiPlayerMenu(void)
 		ingame.bHostSetup = true;
 		bMultiPlayer = true;
 		bMultiMessages = true;
+		NETinit(true);
 		game.type = SKIRMISH;		// needed?
 		lastTitleMode = MULTI;
 		changeTitleMode(MULTIOPTION);
 		break;
 	case FRONTEND_JOIN:
+		NETinit(true);
 		ingame.bHostSetup = false;
 		if (getLobbyError() != ERROR_INVALID)
 		{
@@ -691,6 +711,7 @@ bool runGraphicsOptionsMenu(void)
 				widgSetString(psWScreen, FRONTEND_SCANLINES_R, _("Off"));
 				break;
 		}
+		break;
 
 	case FRONTEND_RADAR_R:
 		rotateRadar = !rotateRadar;
@@ -864,6 +885,18 @@ static bool startVideoOptionsMenu(void)
 			break;
 	}
 
+	// Shaders
+	addTextButton(FRONTEND_SHADERS, FRONTEND_POS6X-35, FRONTEND_POS7Y, _("Shaders"), 0);
+
+	if (war_GetShaders() == SHADERS_ON || war_GetShaders() == SHADERS_ONLY)
+	{
+		addTextButton(FRONTEND_SHADERS_R, FRONTEND_POS6M-55, FRONTEND_POS7Y, _("On"), 0);
+	}
+	else
+	{
+		addTextButton(FRONTEND_SHADERS_R, FRONTEND_POS6M-55, FRONTEND_POS7Y, _("Off"), 0);
+	}
+
 	// Add some text down the side of the form
 	addSideText(FRONTEND_SIDETEXT, FRONTEND_SIDEX, FRONTEND_SIDEY, _("VIDEO OPTIONS"));
 
@@ -1020,6 +1053,28 @@ bool runVideoOptionsMenu(void)
 			else
 			{
 				widgSetString(psWScreen, FRONTEND_VSYNC_R, _("Off"));
+			}
+			break;
+		}
+
+		case FRONTEND_SHADERS:
+		case FRONTEND_SHADERS_R:
+		{
+			switch (war_GetShaders())
+			{
+				case SHADERS_ON:
+					war_SetShaders(SHADERS_OFF);
+					pie_SetShaderUsage(false);
+					widgSetString(psWScreen, FRONTEND_SHADERS_R, _("Off"));
+					break;
+				case SHADERS_OFF:
+					war_SetShaders(SHADERS_ON);
+					pie_SetShaderUsage(true);
+					widgSetString(psWScreen, FRONTEND_SHADERS_R, _("On"));
+					break;
+				case FALLBACK:
+				case SHADERS_ONLY:
+					break;
 			}
 			break;
 		}
@@ -1204,7 +1259,7 @@ static bool startGameOptionsMenu(void)
 	addTextButton(FRONTEND_LANGUAGE_R,  FRONTEND_POS2M - 25, FRONTEND_POS2Y, getLanguageName(), 0);
 
 	// Difficulty
-	addTextButton(FRONTEND_DIFFICULTY, FRONTEND_POS3X-25, FRONTEND_POS3Y, _("Difficulty"), 0);
+	addTextButton(FRONTEND_DIFFICULTY, FRONTEND_POS3X-25, FRONTEND_POS3Y, _("Campaign Difficulty"), 0);
 	switch (getDifficultyLevel())
 	{
 		case DL_EASY:
@@ -1279,8 +1334,9 @@ bool runGameOptionsMenu(void)
 		widgSetString(psWScreen, FRONTEND_SIDETEXT, _("GAME OPTIONS"));
 		widgSetTipText(widgGetFromID(psWScreen, FRONTEND_QUIT), P_("menu", "Return"));
 		widgSetString(psWScreen, FRONTEND_LANGUAGE, _("Language"));
-		widgSetString(psWScreen, FRONTEND_COLOUR, _("Unit Colour (SP)"));
-		widgSetString(psWScreen, FRONTEND_COLOUR_MP, _("Unit Colour (MP)"));
+		widgSetString(psWScreen, FRONTEND_COLOUR, _("Unit Colour:"));
+		widgSetString(psWScreen, FRONTEND_COLOUR_CAM, _("Campaign"));
+		widgSetString(psWScreen, FRONTEND_COLOUR_MP, _("Skirmish/Multiplayer"));
 		widgSetString(psWScreen, FRONTEND_DIFFICULTY, _("Difficulty"));
 		widgSetString(psWScreen, FRONTEND_SCROLLSPEED, _("Scroll Speed"));
 		widgSetString(psWScreen, FRONTEND_RADAR, _("Radar"));
@@ -1438,7 +1494,7 @@ static void displayTitleBitmap(WZ_DECL_UNUSED WIDGET *psWidget, WZ_DECL_UNUSED U
 // show warzone logo
 static void displayLogo(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, WZ_DECL_UNUSED PIELIGHT *pColours)
 {
-	iV_DrawImage(FrontImages,IMAGE_FE_LOGO,xOffset+psWidget->x,yOffset+psWidget->y);
+	iV_DrawImage(FrontImages, IMAGE_FE_LOGO, xOffset + psWidget->x, std::max<int>(yOffset + psWidget->y, 0));
 }
 
 
@@ -1622,10 +1678,10 @@ void addTopForm(void)
 
 	sFormInit.formID= FRONTEND_TOPFORM;
 	sFormInit.id	= FRONTEND_LOGO;
-	sFormInit.x		= (short)((sFormInit.width/2)-(FRONTEND_LOGOW/2)); //115;
-	sFormInit.y		= (short)((sFormInit.height/2)-(FRONTEND_LOGOH/2));//18;
-	sFormInit.width = FRONTEND_LOGOW;
-	sFormInit.height= FRONTEND_LOGOH;
+	sFormInit.x		= sFormInit.width/2  - iV_GetImageWidth(FrontImages, IMAGE_FE_LOGO)/2;
+	sFormInit.y		= sFormInit.height/2 - iV_GetImageHeight(FrontImages, IMAGE_FE_LOGO)/2;
+	sFormInit.width = iV_GetImageWidth(FrontImages, IMAGE_FE_LOGO);
+	sFormInit.height= iV_GetImageHeight(FrontImages, IMAGE_FE_LOGO);
 	sFormInit.pDisplay= displayLogo;
 	widgAddForm(psWScreen, &sFormInit);
 }

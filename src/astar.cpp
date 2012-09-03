@@ -338,7 +338,8 @@ static PathCoord fpathAStarExplore(PathfindContext &context, PathCoord tileF)
 	unsigned        nearestDist = 0xFFFFFFFF;
 
 	// search for a route
-	while (!context.nodes.empty())
+	bool foundIt = false;
+	while (!context.nodes.empty() && !foundIt)
 	{
 		PathNode node = fpathTakeNode(context.nodes);
 		if (context.map[node.p.x + node.p.y*mapWidth].visited)
@@ -358,12 +359,16 @@ static PathCoord fpathAStarExplore(PathfindContext &context, PathCoord tileF)
 		{
 			// reached the target
 			nearestCoord = node.p;
-			break;
+			foundIt = true;  // Break out of loop, but not before inserting neighbour nodes, since the neighbours may be important if the context gets reused.
 		}
 
 		// loop through possible moves in 8 directions to find a valid move
 		for (unsigned dir = 0; dir < ARRAY_SIZE(aDirOffset); ++dir)
 		{
+			// Try a new location
+			int x = node.p.x + aDirOffset[dir].x;
+			int y = node.p.y + aDirOffset[dir].y;
+
 			/*
 			   5  6  7
 			     \|/
@@ -372,7 +377,7 @@ static PathCoord fpathAStarExplore(PathfindContext &context, PathCoord tileF)
 			   3  2  1
 			   odd:orthogonal-adjacent tiles even:non-orthogonal-adjacent tiles
 			*/
-			if (dir % 2 != 0)
+			if (dir % 2 != 0 && !context.dstIgnore.isNonblocking(node.p.x, node.p.y) && !context.dstIgnore.isNonblocking(x, y))
 			{
 				int x, y;
 
@@ -390,10 +395,6 @@ static PathCoord fpathAStarExplore(PathfindContext &context, PathCoord tileF)
 					continue;
 				}
 			}
-
-			// Try a new location
-			int x = node.p.x + aDirOffset[dir].x;
-			int y = node.p.y + aDirOffset[dir].y;
 
 			// See if the node is a blocking tile
 			if (context.isBlocked(x, y))
@@ -504,6 +505,17 @@ ASR_RETVAL fpathAStarRoute(MOVE_CONTROL *psMove, PATHJOB *psJob)
 
 		PathExploredTile &tile = context.map[map_coord(p.x) + map_coord(p.y)*mapWidth];
 		newP = p - Vector2i(tile.dx, tile.dy)*(TILE_UNITS/64);
+		Vector2i mapP = map_coord(newP);
+		int xSide = newP.x - world_coord(mapP.x) > TILE_UNITS/2? 1 : -1;  // 1 if newP is on right-hand side of the tile, or -1 if newP is on the left-hand side of the tile.
+		int ySide = newP.y - world_coord(mapP.y) > TILE_UNITS/2? 1 : -1;  // 1 if newP is on bottom side of the tile, or -1 if newP is on the top side of the tile.
+		if (context.isBlocked(mapP.x + xSide, mapP.y))
+		{
+			newP.x = world_coord(mapP.x) + TILE_UNITS/2;  // Point too close to a blocking tile on left or right side, so move the point to the middle.
+		}
+		if (context.isBlocked(mapP.x, mapP.y + ySide))
+		{
+			newP.y = world_coord(mapP.y) + TILE_UNITS/2;  // Point too close to a blocking tile on rop or bottom side, so move the point to the middle.
+		}
 		if (map_coord(p) == Vector2i(context.tileS.x, context.tileS.y) || p == newP)
 		{
 			break;  // We stopped moving, because we reached the destination or the closest reachable tile to context.tileS. Give up now.

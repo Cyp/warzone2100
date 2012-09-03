@@ -18,9 +18,9 @@
 	Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
 */
 /*
- * Screen.c
+ * screen.cpp
  *
- * Basic double buffered display using direct draw.
+ * Basic double buffered display using OpenGL.
  *
  */
 
@@ -41,11 +41,12 @@
 #include "screen.h"
 #include "src/console.h"
 #include "src/levels.h"
+#include <vector>
+#include <algorithm>
 
 /* global used to indicate preferred internal OpenGL format */
 int wz_texture_compression = 0;
 
-bool opengl_fallback_mode = false;
 
 static bool		bBackDrop = false;
 static char		screendump_filename[PATH_MAX];
@@ -56,11 +57,12 @@ static int preview_width = 0, preview_height = 0;
 static Vector2i player_pos[MAX_PLAYERS];
 static bool mappreview = false;
 static char mapname[256];
+OPENGL_DATA opengl;
+extern bool writeGameInfo(const char *pFileName); // Used to help debug issues when we have fatal errors.
 
 /* Initialise the double buffered display */
 bool screenInitialise()
 {
-	char buf[256];
 	GLint glMaxTUs;
 	GLenum err;
 
@@ -74,22 +76,49 @@ bool screenInitialise()
 	}
 
 	/* Dump general information about OpenGL implementation to the console and the dump file */
-	ssprintf(buf, "OpenGL Vendor: %s", glGetString(GL_VENDOR));
-	addDumpInfo(buf);
-	debug(LOG_3D, "%s", buf);
-	ssprintf(buf, "OpenGL Renderer: %s", glGetString(GL_RENDERER));
-	addDumpInfo(buf);
-	debug(LOG_3D, "%s", buf);
-	ssprintf(buf, "OpenGL Version: %s", glGetString(GL_VERSION));
-	addDumpInfo(buf);
-	debug(LOG_3D, "%s", buf);
-	ssprintf(buf, "GLEW Version: %s", glewGetString(GLEW_VERSION));
-	addDumpInfo(buf);
-	debug(LOG_3D, "%s", buf);
+	ssprintf(opengl.vendor, "OpenGL Vendor: %s", glGetString(GL_VENDOR));
+	addDumpInfo(opengl.vendor);
+	debug(LOG_3D, "%s", opengl.vendor);
+	ssprintf(opengl.renderer, "OpenGL Renderer: %s", glGetString(GL_RENDERER));
+	addDumpInfo(opengl.renderer);
+	debug(LOG_3D, "%s", opengl.renderer);
+	ssprintf(opengl.version, "OpenGL Version: %s", glGetString(GL_VERSION));
+	addDumpInfo(opengl.version);
+	debug(LOG_3D, "%s", opengl.version);
+	ssprintf(opengl.GLEWversion, "GLEW Version: %s", glewGetString(GLEW_VERSION));
+	addDumpInfo(opengl.GLEWversion);
+	debug(LOG_3D, "%s", opengl.GLEWversion);
+
+	GLubyte const *extensionsBegin = glGetString(GL_EXTENSIONS);
+	GLubyte const *extensionsEnd = extensionsBegin + strlen((char const *)extensionsBegin);
+	std::vector<std::string> glExtensions;
+	for (GLubyte const *i = extensionsBegin; i < extensionsEnd; )
+	{
+		GLubyte const *j = std::find(i, extensionsEnd, ' ');
+		glExtensions.push_back(std::string(i, j));
+		i = j + 1;
+	}
 
 	/* Dump extended information about OpenGL implementation to the console */
-	debug(LOG_3D, "OpenGL Extensions : %s", glGetString(GL_EXTENSIONS)); // FIXME This is too much for MAX_LEN_LOG_LINE
-	debug(LOG_3D, "Supported OpenGL extensions:");
+
+	std::string line;
+	for (unsigned n = 0; n < glExtensions.size(); ++n)
+	{
+		std::string word = " ";
+		word += glExtensions[n];
+		if (n + 1 != glExtensions.size())
+		{
+			word += ',';
+		}
+		if (line.size() + word.size() > 160)
+		{
+			debug(LOG_3D, "OpenGL Extensions:%s", line.c_str());
+			line.clear();
+		}
+		line += word;
+	}
+	debug(LOG_3D, "OpenGL Extensions:%s", line.c_str());
+	debug(LOG_3D, "Notable OpenGL features:");
 	debug(LOG_3D, "  * OpenGL 1.2 %s supported!", GLEW_VERSION_1_2 ? "is" : "is NOT");
 	debug(LOG_3D, "  * OpenGL 1.3 %s supported!", GLEW_VERSION_1_3 ? "is" : "is NOT");
 	debug(LOG_3D, "  * OpenGL 1.4 %s supported!", GLEW_VERSION_1_4 ? "is" : "is NOT");
@@ -113,14 +142,17 @@ bool screenInitialise()
 	screenWidth = MAX(screenWidth, 640);
 	screenHeight = MAX(screenHeight, 480);
 
-	if (GLEW_VERSION_2_0 && !opengl_fallback_mode)
+	std::pair<int, int> glslVersion(0, 0);
+	if (GLEW_ARB_shading_language_100 && GLEW_ARB_shader_objects)
 	{
+		sscanf((char const *)glGetString(GL_SHADING_LANGUAGE_VERSION), "%d.%d", &glslVersion.first, &glslVersion.second);
+
 		/* Dump information about OpenGL 2.0+ implementation to the console and the dump file */
 		GLint glMaxTIUs, glMaxTCs, glMaxTIUAs, glmaxSamples, glmaxSamplesbuf;
 
 		debug(LOG_3D, "  * OpenGL GLSL Version : %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-		ssprintf(buf, "OpenGL GLSL Version : %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
-		addDumpInfo(buf);
+		ssprintf(opengl.GLSLversion, "OpenGL GLSL Version : %s", glGetString(GL_SHADING_LANGUAGE_VERSION));
+		addDumpInfo(opengl.GLSLversion);
 
 		glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS, &glMaxTIUs);
 		debug(LOG_3D, "  * Total number of Texture Image Units (TIUs) supported is %d.", (int) glMaxTIUs);
@@ -132,30 +164,34 @@ bool screenInitialise()
 		debug(LOG_3D, "  * (current) Max Sample buffer is %d.", (int) glmaxSamplesbuf);
 		glGetIntegerv(GL_SAMPLES, &glmaxSamples);
 		debug(LOG_3D, "  * (current) Max Sample level is %d.", (int) glmaxSamples);
+	}
 
+	bool haveARB_vertex_buffer_object = GLEW_ARB_vertex_buffer_object || GLEW_VERSION_1_5;
+	bool haveARB_texture_env_crossbar = GLEW_ARB_texture_env_crossbar || GLEW_NV_texture_env_combine4 || GLEW_VERSION_1_4;
+	bool canRunFallback = GLEW_VERSION_1_2 && haveARB_vertex_buffer_object && haveARB_texture_env_crossbar;
+	bool canRunShaders = GLEW_VERSION_1_2 && haveARB_vertex_buffer_object && glslVersion >= std::make_pair(1, 20);  // glGetString(GL_SHADING_LANGUAGE_VERSION) >= "1.20"
+
+	pie_SetFallbackAvailability(canRunFallback);
+
+	if (canRunShaders)
+	{
+		screen_EnableMissingFunctions();  // We need to do this before pie_LoadShaders(), but the effect of this call will be undone later by iV_TextInit(), so we will need to call it again.
 		if (pie_LoadShaders())
 		{
 			pie_SetShaderAvailability(true);
 		}
-
 	}
-	else if (GLEW_VERSION_1_5)
+	else if (canRunFallback)
 	{
-		debug(LOG_POPUP, _("OpenGL 2.0 is not supported by your system. Some things may look wrong. Please upgrade your graphics driver/hardware, if possible."));
+		// corner cases: vbo(core 1.5 or ARB ext), texture crossbar (core 1.4 or ARB ext)
+		debug(LOG_POPUP, _("OpenGL GLSL shader version 1.20 is not supported by your system. Some things may look wrong. Please upgrade your graphics driver/hardware, if possible."));
 	}
-	else // less than 1.5
+	else
 	{
-		// Check if VBO extension available for haxx
-		if (GLEW_VERSION_1_4 && GLEW_ARB_vertex_buffer_object)
-		{
-			debug(LOG_POPUP, _("OpenGL 1.5/2.0 is not supported by your system. Some things may look wrong. Please upgrade your graphics driver/hardware, if possible."));
-			// screen_EnableVBO should be called later, so nothing (quesoGLC) will call glewInit twice and flush our tweaks into void
-		}
-		else
-		{
-			debug(LOG_FATAL, _("OpenGL 1.4 + VBO extension is not supported by your system. The game requires this. Please upgrade your graphics drivers/hardware, if possible."));
-			exit(1);
-		}
+		// We write this file in hopes that people will upload the information in it to us.
+		writeGameInfo("WZdebuginfo.txt");
+		debug(LOG_FATAL, _("OpenGL 1.2 + VBO + TEC is not supported by your system. The game requires this. Please upgrade your graphics drivers/hardware, if possible."));
+		exit(1);
 	}
 
 	glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
@@ -172,12 +208,19 @@ void screenShutDown(void)
 }
 
 // Make OpenGL's VBO functions available under the core names for drivers that support OpenGL 1.4 only but have the VBO extension
-void screen_EnableVBO()
+void screen_EnableMissingFunctions()
 {
-	// no need if there is OpenGL 1.5 available
+	if (!GLEW_VERSION_1_3 && GLEW_ARB_multitexture)
+	{
+		debug(LOG_WARNING, "Pre-OpenGL 1.3: Fixing ARB_multitexture extension function names.");
+
+		__glewActiveTexture = __glewActiveTextureARB;
+		__glewMultiTexCoord2fv = __glewMultiTexCoord2fvARB;
+	}
+
 	if (!GLEW_VERSION_1_5 && GLEW_ARB_vertex_buffer_object)
 	{
-		debug(LOG_WARNING, "OpenGL 1.4+: Using VBO extension functions under the core names.");
+		debug(LOG_WARNING, "Pre-OpenGL 1.5: Fixing ARB_vertex_buffer_object extension function names.");
 
 		__glewBindBuffer = __glewBindBufferARB;
 		__glewBufferData = __glewBufferDataARB;
@@ -190,6 +233,37 @@ void screen_EnableVBO()
 		__glewIsBuffer = __glewIsBufferARB;
 		__glewMapBuffer = __glewMapBufferARB;
 		__glewUnmapBuffer = __glewUnmapBufferARB;
+	}
+
+	if (!GLEW_VERSION_2_0 && GLEW_ARB_shader_objects)
+	{
+		debug(LOG_WARNING, "Pre-OpenGL 2.0: Fixing ARB_shader_objects extension function names.");
+
+		__glewGetUniformLocation = __glewGetUniformLocationARB;
+		__glewAttachShader = __glewAttachObjectARB;
+		__glewCompileShader = __glewCompileShaderARB;
+		__glewCreateProgram = __glewCreateProgramObjectARB;
+		__glewCreateShader = __glewCreateShaderObjectARB;
+		__glewGetProgramInfoLog = __glewGetInfoLogARB;
+		__glewGetShaderInfoLog = __glewGetInfoLogARB;  // Same as previous.
+		__glewGetProgramiv = __glewGetObjectParameterivARB;
+		__glewUseProgram = __glewUseProgramObjectARB;
+		__glewGetShaderiv = __glewGetObjectParameterivARB;
+		__glewLinkProgram = __glewLinkProgramARB;
+		__glewShaderSource = __glewShaderSourceARB;
+		__glewUniform1f = __glewUniform1fARB;
+		__glewUniform1i = __glewUniform1iARB;
+		__glewUniform4fv = __glewUniform4fvARB;
+	}
+
+	if ((GLEW_ARB_imaging || GLEW_EXT_blend_color) && __glewBlendColor == NULL)
+	{
+		__glewBlendColor = __glewBlendColorEXT;  // Shouldn't be needed if GLEW_ARB_imaging is true, but apparently is needed even in that case, with some drivers..?
+		if (__glewBlendColor == NULL)
+		{
+			debug(LOG_ERROR, "Your graphics driver is broken, and claims to support ARB_imaging or EXT_blend_color without exporting glBlendColor[EXT].");
+			__GLEW_ARB_imaging = __GLEW_EXT_blend_color = 0;
+		}
 	}
 }
 
@@ -429,6 +503,7 @@ void screenDoDumpToDiskIfRequired(void)
 			return;
 		}
 	}
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
 	glReadPixels(0, 0, image.width, image.height, GL_RGB, GL_UNSIGNED_BYTE, image.bmp);
 
 	iV_saveImage_PNG(fileName, &image);

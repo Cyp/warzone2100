@@ -414,6 +414,12 @@ struct PROPULSION_STATS : public COMPONENT_STATS
 {
 	UDWORD			maxSpeed;		///< Max speed for the droid
 	PROPULSION_TYPE propulsionType; ///< Type of propulsion used - index into PropulsionTable
+	UDWORD		turnSpeed;
+	UDWORD		spinSpeed;
+	UDWORD		spinAngle;
+	UDWORD		skidDeceleration;
+	UDWORD		deceleration;
+	UDWORD		acceleration;
 };
 
 struct SENSOR_STATS : public COMPONENT_STATS
@@ -445,7 +451,6 @@ struct REPAIR_STATS : public COMPONENT_STATS
 
 struct WEAPON_STATS : public COMPONENT_STATS
 {
-	UDWORD			shortRange;				///< Max distance to target for	short	range	shot
 	UDWORD			longRange;				///< Max distance to target for	long range shot
 	UDWORD			minRange;				///< Min distance to target for	shot
 	UDWORD			shortHit;				///< Chance to hit at short range

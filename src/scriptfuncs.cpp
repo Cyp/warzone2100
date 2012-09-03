@@ -1524,7 +1524,9 @@ bool scrAddMessage(void)
 		if (playImmediate)
 		{
 			displayImmediateMessage(psMessage);
-			stopReticuleButtonFlash(IDRET_INTEL_MAP);
+			// FIXME: We should add some kind of check to see if the FMVs are available or not, and enable this based on that.
+			// If we want to inform user of a message, we shouldn't stop the flash right?
+			//stopReticuleButtonFlash(IDRET_INTEL_MAP);
 		}
 	}
 
@@ -5225,11 +5227,14 @@ DROID	*psDroid;
 
 	return(true);
 }
+
 // -----------------------------------------------------------------------------------------
 static bool	structHasModule(STRUCTURE *psStruct)
 {
-STRUCTURE_STATS	*psStats;
-bool			bFound;
+	STRUCTURE_STATS	*psStats;
+	bool bFound = false;
+
+	ASSERT_OR_RETURN(false, psStruct != NULL, "Testing for a module from a NULL struct");
 
 	/* Fail if the structure isn't built yet */
 	if(psStruct->status != SS_BUILT)
@@ -5237,18 +5242,6 @@ bool			bFound;
 		return(false);
 	}
 
-	/* Not found yet */
-	bFound = false;
-
-
-	if(psStruct==NULL)
-	{
-		ASSERT( psStruct!=NULL,"structHasModule - Testing for a module from a NULL struct - huh!?" );
-		return(false);
-	}
-
-	if(psStruct)
-	{
 		/* Grab a stats pointer */
 		psStats = psStruct->pStructureType;
 		if(StructIsFactory(psStruct)
@@ -5287,7 +5280,6 @@ bool			bFound;
 			bFound = false;
 		}
 
-	}
 	return(bFound);
 }
 
@@ -5638,7 +5630,8 @@ bool scrGetGameStatus(void)
 
 			break;
 		case STATUS_DeliveryReposInProgress:
-			if (DeliveryReposValid()==true) bResult=true;
+			if (deliveryReposValid())
+				bResult=true;
 			break;
 
 		default:
@@ -6337,11 +6330,9 @@ bool scrIsVtol(void)
 	return true;
 }
 
-
-
-
-// do the setting up of the template list for the tutorial.
-// This function looks like it searches for a template called "ViperLtMGWheels", and deletes it. Why?
+// Fix the tutorial's template list(s).
+// DO NOT MODIFY THIS WITHOUT KNOWING WHAT YOU ARE DOING.  You will break the tutorial!
+// In short, we want to design a ViperLtMGWheels, but it is already available to make, so we must delete it.
 bool scrTutorialTemplates(void)
 {
 	DROID_TEMPLATE	*psCurr, *psPrev;
@@ -6349,11 +6340,9 @@ bool scrTutorialTemplates(void)
 	// find ViperLtMGWheels
 	char const *pName = getDroidResourceName("ViperLtMGWheels");
 
-	for (psCurr = apsDroidTemplates[selectedPlayer],psPrev = NULL;
-			psCurr != NULL;
-			psCurr = psCurr->psNext)
+	for (psCurr = apsDroidTemplates[selectedPlayer], psPrev = NULL; psCurr != NULL;	psCurr = psCurr->psNext)
 	{
-		if (strcmp(pName,psCurr->aName)==0)
+		if (strcmp(pName, psCurr->aName)==0)
 		{
 			if (psPrev)
 			{
@@ -6363,15 +6352,24 @@ bool scrTutorialTemplates(void)
 			{
 				apsDroidTemplates[selectedPlayer] = psCurr->psNext;
 			}
-			//quit looking cos found
 			break;
 		}
 		psPrev = psCurr;
 	}
 
-	// Delete the template.
+	// Delete the template in *both* lists!
 	if(psCurr)
 	{
+		for (std::list<DROID_TEMPLATE>::iterator i = localTemplates.begin(); i != localTemplates.end(); ++i)
+		{
+			DROID_TEMPLATE *dropTemplate = &*i;
+			if (psCurr->multiPlayerID == dropTemplate->multiPlayerID)
+			{
+				free(dropTemplate->pName);
+				localTemplates.erase(i);
+				break;
+			}
+		}
 		delete psCurr;
 	}
 	else
@@ -10683,27 +10681,6 @@ static DROID_TEMPLATE* scrCheckTemplateExists(SDWORD player, DROID_TEMPLATE *psT
 	return NULL;
 }
 
-bool scrWeaponShortHitUpgrade(void)
-{
-	SDWORD					player,weapIndex;
-	const WEAPON_STATS		*psWeapStats;
-
-	if (!stackPopParams(2, VAL_INT, &player, ST_WEAPON, &weapIndex))
-	{
-		return false;
-	}
-
-	psWeapStats = &asWeaponStats[weapIndex];
-
-	scrFunctionResult.v.ival = asWeaponUpgrade[player][psWeapStats->weaponSubClass].shortHit;
-	if (!stackPushResult(VAL_INT, &scrFunctionResult))
-	{
-		return false;
-	}
-
-	return true;
-}
-
 bool scrWeaponLongHitUpgrade(void)
 {
 	SDWORD					player,weapIndex;
@@ -10724,7 +10701,6 @@ bool scrWeaponLongHitUpgrade(void)
 
 	return true;
 }
-
 
 bool scrWeaponDamageUpgrade(void)
 {

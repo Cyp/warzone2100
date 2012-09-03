@@ -118,8 +118,6 @@ static void init_tileNames(int type);
 /// The different ground types
 GROUND_TYPE *psGroundTypes;
 int numGroundTypes;
-int waterGroundType;
-int cliffGroundType;
 char *tileset = NULL;
 static int numTile_names;
 static char *Tile_names = NULL;
@@ -128,8 +126,8 @@ static char *Tile_names = NULL;
 #define ROCKIE 3
 
 static int *map;			// 3D array pointer that holds the texturetype
-static int *mapDecals;		// array that tells us what tile is a decal
-#define MAX_TERRAIN_TILES 100		// max that we support (for now)
+static bool *mapDecals;           // array that tells us what tile is a decal
+#define MAX_TERRAIN_TILES 0x0200  // max that we support (for now), see TILE_NUMMASK
 
 /* Look up table that returns the terrain type of a given tile texture */
 UBYTE terrainTypes[MAX_TILE_TEXTURES];
@@ -282,7 +280,7 @@ static void init_tileNames(int type)
 	debug(LOG_TERRAIN, "name: %s, with %d entries", name, numlines);
 	if (numlines == 0 || numlines > MAX_TERRAIN_TILES)
 	{
-		debug(LOG_FATAL, "Rockie_enum paramater is out of range (%d). Aborting.", numlines);
+		debug(LOG_FATAL, "Rockie_enum parameter is out of range (%d). Aborting.", numlines);
 		abort();
 	}
 
@@ -356,9 +354,6 @@ fallback:
 			psGroundTypes[getTextureType(textureType)].textureSize = textureSize ;
 		}
 
-		waterGroundType = getTextureType("a_water");
-		cliffGroundType = getTextureType("a_cliff");
-
 		SetGroundForTile("tileset/arizonaground.txt", "arizona_ground");
 		SetDecals("tileset/arizonadecals.txt", "arizona_decals");
 	}
@@ -398,9 +393,6 @@ fallback:
 			psGroundTypes[getTextureType(textureType)].textureSize = textureSize;
 		}
 
-		waterGroundType = getTextureType("u_water");
-		cliffGroundType = getTextureType("u_cliff");
-
 		SetGroundForTile("tileset/urbanground.txt", "urban_ground");
 		SetDecals("tileset/urbandecals.txt", "urban_decals");
 	}
@@ -439,9 +431,6 @@ fallback:
 			psGroundTypes[getTextureType(textureType)].textureName = strdup(textureName);
 			psGroundTypes[getTextureType(textureType)].textureSize = textureSize;
 		}
-
-		waterGroundType = getTextureType("r_water");
-		cliffGroundType = getTextureType("r_cliff");
 
 		SetGroundForTile("tileset/rockieground.txt", "rockie_ground");
 		SetDecals("tileset/rockiedecals.txt", "rockie_decals");
@@ -561,30 +550,16 @@ static int determineGroundType(int x, int y, const char *tileset)
 {
 	int ground[2][2];
 	int votes[2][2];
+	int weight[2][2];
 	int i,j, tile;
 	int a,b, best;
-	bool arizona, rockies, urban;
-	arizona = rockies = urban = false;
-	if (strcmp(tileset, "texpages/tertilesc1hw") == 0)
-	{
-		arizona = true;
-	} else if (strcmp(tileset, "texpages/tertilesc2hw") == 0)
-	{
-		urban = true;
-	} else if (strcmp(tileset, "texpages/tertilesc3hw") == 0)
-	{
-		rockies = true;
-	} else
-	{
-		debug(LOG_ERROR, "unknown tileset");
-		return 0;
-	}
+	MAPTILE *psTile = mapTile(x,y);
 
 	if (x < 0 || y < 0 || x >= mapWidth || y >= mapHeight)
 	{
 		return 0; // just return the first ground type
 	}
-	
+
 	// check what tiles surround this grid point
 	for(i=0;i<2;i++)
 	{
@@ -592,34 +567,31 @@ static int determineGroundType(int x, int y, const char *tileset)
 		{
 			if (x+i-1 < 0 || y+j-1 < 0 || x+i-1 >= mapWidth || y+j-1 >= mapHeight)
 			{
+				psTile = 0;
 				tile = 0;
 			}
 			else
 			{
-				tile = mapTile(x+i-1, y+j-1)->texture;
+				psTile = mapTile(x+i-1, y+j-1);
+				tile = psTile->texture;
 			}
 			a = i;
 			b = j;
 			rotFlip(tile, &a, &b);
 			ground[i][j] = groundFromMapTile(tile, a, b);
-			
-			votes[i][j] = 0;
 
-			// cliffs are so small they won't show up otherwise
-			if (urban)
+			votes[i][j] = 0;
+			// votes are weighted, some tiles have more weight than others
+			weight[i][j] = 10;
+
+			if (psTile)
 			{
-				if (ground[i][j] == getTextureType("u_cliff"))
-					return ground[i][j];
-			}
-			else if (arizona)
-			{
-				if (ground[i][j] == getTextureType("a_cliff"))
-					return ground[i][j];
-			}
-			else if (rockies)
-			{
-				if (ground[i][j] == getTextureType("r_cliff"))
-					return ground[i][j];
+				// cliff tiles have higher priority, to be clearly visible
+				if (terrainType(psTile) == TER_CLIFFFACE) 
+					weight[i][j] = 100;
+				// water bottom has lower priority, to stay inside water
+				if (terrainType(psTile) == TER_WATER) 
+					weight[i][j] = 1;
 			}
 		}
 	}
@@ -635,19 +607,21 @@ static int determineGroundType(int x, int y, const char *tileset)
 				{
 					if (ground[i][j] == ground[a][b])
 					{
-						votes[i][j]++;
+						votes[i][j] += weight[a][b];
 					}
 				}
 			}
 		}
 	}
 	// and determine the winner
-	best = -1;
+	best = -1; 
+	a = 0;
+	b = 0;
 	for(i=0;i<2;i++)
 	{
 		for(j=0;j<2;j++)
 		{
-			if (votes[i][j] > best)
+			if (votes[i][j] > best || (votes[i][j] == best && ground[i][j]<ground[a][b]))
 			{
 				best = votes[i][j];
 				a = i;
@@ -657,6 +631,7 @@ static int determineGroundType(int x, int y, const char *tileset)
 	}
 	return ground[a][b];
 }
+
 
 // SetDecals()
 // reads in the decal array for the requested tileset.
@@ -686,21 +661,22 @@ static void SetDecals(const char *filename, const char *decal_type)
 	debug(LOG_TERRAIN, "reading: %s, with %d entries", filename, numlines);
 	//increment the pointer to the start of the next record
 	pFileData = strchr(pFileData,'\n') + 1;
-	if (numlines > MAX_TERRAIN_TILES)
-	{
-		debug(LOG_FATAL, "Too many tiles, we only support %d max at this time", MAX_TERRAIN_TILES);
-		abort();
-	}
-	mapDecals = (int *)malloc(sizeof(int)*MAX_TERRAIN_TILES);		// max of 80 tiles that we support
-	memset(mapDecals, 0x0, sizeof(int)*MAX_TERRAIN_TILES);	// set everything to false;
+	mapDecals = new bool[MAX_TERRAIN_TILES];
+	std::fill_n(mapDecals, MAX_TERRAIN_TILES, false);  // set everything to false.
 
 	for (i=0; i < numlines; i++)
 	{
+		tiledecal = -1;
 		sscanf(pFileData, "%d%n", &tiledecal, &cnt);
 		pFileData += cnt;
 		//increment the pointer to the start of the next record
 		pFileData = strchr(pFileData,'\n') + 1;
-		mapDecals[tiledecal] = 1;
+		if ((unsigned)tiledecal > MAX_TERRAIN_TILES)
+		{
+			debug(LOG_ERROR, "Tile index is out of range!  Was %d, our max is %d", tiledecal, MAX_TERRAIN_TILES);
+			continue;
+		}
+		mapDecals[tiledecal] = true;
 	}
 }
 // hasDecals()
@@ -880,7 +856,7 @@ bool mapLoad(char *filename, bool preview)
 			// FIXME: magic number
 			mapTile(i, j)->waterLevel = mapTile(i, j)->height - world_coord(1) / 3;
 			// lower riverbed
-			if (mapTile(i, j)->ground == waterGroundType)
+			if (terrainType(mapTile(i, j)) == TER_WATER && terrainType(mapTile(i-1, j)) == TER_WATER && terrainType(mapTile(i, j-1)) == TER_WATER && terrainType(mapTile(i-1, j-1)) == TER_WATER)
 			{
 				mapTile(i, j)->height -= WATER_MIN_DEPTH - mt.u32()%(WATER_MAX_DEPTH + 1 - WATER_MIN_DEPTH);
 			}
@@ -993,7 +969,7 @@ bool mapSave(char **ppFileData, UDWORD *pFileSize)
 	for (int i = 0; i < mapWidth*mapHeight; i++)
 	{
 		psTileData->texture = psTile->texture;
-		if (psTile->ground == waterGroundType)
+		if (terrainType(psTile) == TER_WATER)
 		{
 			psTileData->height = (psTile->waterLevel + world_coord(1) / 3) / ELEVATION_SCALE;
 		}
@@ -1054,7 +1030,7 @@ bool mapShutdown(void)
 	}
 
 	free(psMapTiles);
-	free(mapDecals);
+	delete[] mapDecals;
 	free(psGroundTypes);
 	free(map);
 	free(Tile_names);
@@ -1063,6 +1039,7 @@ bool mapShutdown(void)
 	free(psBlockMap[AUX_ASTARMAP]);
 	psBlockMap[AUX_ASTARMAP] = NULL;
 	free(psBlockMap[AUX_DANGERMAP]);
+	free(floodbucket);
 	psBlockMap[AUX_DANGERMAP] = NULL;
 	for (x = 0; x < MAX_PLAYERS + AUX_MAX; x++)
 	{
@@ -1071,6 +1048,7 @@ bool mapShutdown(void)
 	}
 
 	map = NULL;
+	floodbucket = NULL;
 	psGroundTypes = NULL;
 	mapDecals = NULL;
 	psMapTiles = NULL;
@@ -1643,6 +1621,7 @@ static const Vector2i aDirOffset[] =
 };
 
 // Flood fill a "continent".
+// TODO take into account scroll limits and update continents on scroll limit changes
 static void mapFloodFill(int x, int y, int continent, uint8_t blockedBits, uint16_t MAPTILE::*varContinent)
 {
 	std::vector<Vector2i> open;
@@ -1661,7 +1640,7 @@ static void mapFloodFill(int x, int y, int continent, uint8_t blockedBits, uint1
 			// rely on the fact that all border tiles are inaccessible to avoid checking explicitly
 			Vector2i npos = pos + aDirOffset[i];
 
-			if (!tileOnMap(npos))
+			if (npos.x < 1 || npos.y < 1 || npos.x > mapWidth - 2 || npos.y > mapHeight - 2)
 			{
 				continue;
 			}
@@ -1693,9 +1672,9 @@ void mapFloodFillContinents()
 	}
 
 	/* Iterate over the whole map, looking for unset continents */
-	for (y = 0; y < mapHeight; y++)
+	for (y = 1; y < mapHeight - 2; y++)
 	{
-		for (x = 0; x < mapWidth; x++)
+		for (x = 1; x < mapWidth - 2; x++)
 		{
 			MAPTILE *psTile = mapTile(x, y);
 

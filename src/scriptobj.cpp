@@ -456,60 +456,29 @@ bool scrWeaponObjGet(UDWORD index)
 
 	switch (index)
 	{
-	case WEAPID_SHORT_RANGE:
-
-		type = VAL_INT;
-
-		scrFunctionResult.v.ival = asWeaponStats[weapIndex].shortRange;
-
-		break;
 	case WEAPID_LONG_RANGE:
-
 		type = VAL_INT;
-
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].longRange;
-
-		break;
-	case WEAPID_SHORT_HIT:
-		type = VAL_INT;
-
-		scrFunctionResult.v.ival = asWeaponStats[weapIndex].shortHit;
-
 		break;
 	case WEAPID_LONG_HIT:
-
 		type = VAL_INT;
-
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].longHit;
-
 		break;
 	case WEAPID_DAMAGE:
-
 		type = VAL_INT;
-
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].damage;
-
 		break;
 	case WEAPID_FIRE_PAUSE:
-
 		type = VAL_INT;
-
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].firePause;
-
 		break;
 	case WEAPID_RELOAD_TIME:
-
 		type = VAL_INT;
-
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].reloadTime;
-
 		break;
 	case WEAPID_NUM_ROUNDS:
-
 		type = VAL_INT;
-
 		scrFunctionResult.v.ival = asWeaponStats[weapIndex].numRounds;
-
 		break;
 	default:
 		ASSERT( false, "unknown variable index" );
@@ -976,10 +945,11 @@ bool scrValDefLoad(INTERP_VAL *psVal, WzConfig &ini)
 		psVal->v.oval = NULL;
 		if (ini.contains("data"))
 		{
+			// FIXME: Ugh. Find a better way to show full template info
 			psVal->v.oval = (void*)IdToTemplate(ini.value("data").toInt(), ANYPLAYER);
 			if ((DROID_TEMPLATE*)(psVal->v.oval) == NULL)
 			{
-				debug(LOG_FATAL, "Could not find template");
+				debug(LOG_FATAL, "Could not find template %d", ini.value("data").toInt());
 			}
 		}
 		break;

@@ -145,10 +145,6 @@ void kf_SelectAllLandCombatUnits();
 void kf_SelectAllCombatCyborgs();
 extern void	kf_SelectAllSameType( void );
 
-extern void	kf_SetDroidRangeShort( void );
-extern void	kf_SetDroidRangeDefault( void );
-extern void	kf_SetDroidRangeLong( void );
-
 extern void	kf_SetDroidRetreatMedium( void );
 extern void	kf_SetDroidRetreatHeavy( void );
 extern void	kf_SetDroidRetreatNever( void );
@@ -263,5 +259,7 @@ void    kf_ForceDesync(void);
 void	kf_PowerInfo( void );
 void	kf_BuildNextPage( void );
 void	kf_BuildPrevPage( void );
+extern void kf_DamageMe(void);
+extern void kf_AutoGame(void);
 
 #endif // __INCLUDED_SRC_KEYBIND_H__

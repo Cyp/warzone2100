@@ -714,8 +714,9 @@ const char *loadResearchViewData(const char* fileName)
 			v->textMsg[j].remove('\t');
 			v->textMsg[j].remove(0, 2); // initial _(
 			v->textMsg[j].remove(v->textMsg[j].length() - 1, 1); // final )
+			v->textMsg[j] = QString(_(v->textMsg[j].toUtf8().constData()));
+			v->textMsg[j].replace("%%", "%");
 		}
-		if (v->textMsg[v->textMsg.size() - 1].isEmpty()) v->textMsg.removeAt(v->textMsg.size() - 1);
 		v->type = VIEW_RES;
 		v->pData = r;
 		if (ini.contains("imdName"))
@@ -751,11 +752,11 @@ VIEWDATA *getViewData(const char *pName)
 		while (iter != apsViewData.constEnd())
 		{
 			VIEWDATA *psViewData = iter.value();
-			debug(LOG_ERROR, "\t%s", psViewData->pName);
+			debug(LOG_WZ, "\t%s", psViewData->pName);
 			++iter;
 		}
 	}
-	ASSERT(ptr, "Message %s not found, those known listed above", pName);
+	ASSERT(ptr, "Message %s not found, run with --debug=wz to get a list of all known messages", pName);
 	return ptr;
 }
 

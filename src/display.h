@@ -30,10 +30,10 @@
 /* Initialise the display system */
 extern bool dispInitialise(void);
 
-extern void shakeStart(void);
+extern void shakeStart(unsigned int length);
 extern void shakeStop(void);
 
-extern void ProcessRadarInput(void);
+void ProcessRadarInput();
 
 extern void processInput(void);
 /*don't want to do any of these whilst in the Intelligence Screen*/
@@ -51,6 +51,8 @@ extern void clearSel(void);
 extern void clearSelection(void);
 // deal with selecting a droid
 extern void dealWithDroidSelect(DROID *psDroid, bool bDragBox);
+
+bool isMouseOverRadar();
 
 extern	void	setInvertMouseStatus( bool val );
 extern bool	getInvertMouseStatus( void );
@@ -181,11 +183,12 @@ BASE_OBJECT	*mouseTarget( void );
 bool StartObjectOrbit(BASE_OBJECT *psObj);
 void CancelObjectOrbit(void);
 
-extern void FinishDeliveryPosition(UDWORD xPos,UDWORD yPos,void *UserData);
-extern void CancelDeliveryRepos(void);
-extern void StartDeliveryPosition( OBJECT_POSITION *psLocation );
-extern bool DeliveryReposValid(void);
-extern FLAG_POSITION *deliveryPointToMove;
+extern void cancelDeliveryRepos(void);
+extern void startDeliveryPosition(FLAG_POSITION *psFlag);
+extern bool deliveryReposValid(void);
+extern void processDeliveryRepos(void);
+extern void renderDeliveryRepos(void);
+extern bool deliveryReposFinished(FLAG_POSITION *psFlag = NULL);
 
 extern void StartTacticalScrollObj(bool driveActive,BASE_OBJECT *psObj);
 extern void CancelTacticalScroll(void);
@@ -215,8 +218,6 @@ extern void	setDesiredPitch(SDWORD pitch);
 extern void setSensorAssigned(void);
 extern void	setShakeStatus( bool val );
 extern bool	getShakeStatus( void );
-
-extern void	displayInitVars(void);
 
 void AddDerrickBurningMessage(void);
 

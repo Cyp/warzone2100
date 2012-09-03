@@ -1027,7 +1027,7 @@ static void proj_ImpactFunc( PROJECTILE *psObj )
 			addEffect(&position, EFFECT_SAT_LASER, SAT_LASER_STANDARD, false, NULL, 0, psObj->time);
 			if (clipXY(psObj->pos.x, psObj->pos.y))
 			{
-				shakeStart();
+				shakeStart(1800);	// takes out lots of stuff so shake length is greater
 			}
 		}
 	}
@@ -1718,7 +1718,9 @@ int establishTargetHeight(BASE_OBJECT const *psTarget)
 		case OBJ_STRUCTURE:
 		{
 			STRUCTURE_STATS * psStructureStats = ((STRUCTURE const *)psTarget)->pStructureType;
-			return psStructureStats->pIMD[0]->max.y + psStructureStats->pIMD[0]->min.y;
+			int height = psStructureStats->pIMD[0]->max.y + psStructureStats->pIMD[0]->min.y;
+			height -= gateCurrentOpenHeight((STRUCTURE const *)psTarget, gameTime, 2);  // Treat gate as at least 2 units tall, even if open, so that it's possible to hit.
+			return height;
 		}
 		case OBJ_FEATURE:
 			// Just use imd ymax+ymin

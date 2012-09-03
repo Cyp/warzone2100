@@ -92,6 +92,8 @@
 #include "clparse.h"
 #include "research.h"
 #include "template.h"
+#include "qtscript.h"
+#include "multigifts.h"
 
 /*
 	KeyBind.c
@@ -125,7 +127,6 @@ static void kfsf_SetSelectedDroidsState( SECONDARY_ORDER sec, SECONDARY_STATE St
  */
 bool runningMultiplayer(void)
 {
-	// NOTE: may want to only allow this for DEBUG builds?? -- Buginator
 	if (!bMultiPlayer || !NetPlay.bComms)
 		return false;
 
@@ -138,6 +139,33 @@ static void noMPCheatMsg(void)
 }
 
 // --------------------------------------------------------------------------
+void kf_AutoGame(void)
+{
+#ifndef DEBUG
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
+#endif
+	if (game.type == CAMPAIGN)
+	{
+		CONPRINTF(ConsoleString, (ConsoleString, "Not possible with the campaign!"));
+		return;
+	}
+	// Notify all human players that we are trying to enable autogame
+	for (int i = 0; i < MAX_PLAYERS; i++)
+	{
+		if(NetPlay.players[i].allocated)
+		{
+			sendGift(AUTOGAME_GIFT, i);
+		}
+	}
+
+	CONPRINTF(ConsoleString, (ConsoleString, "autogame request has been sent to all players. AI script *must* support this command!"));
+}
+
 void	kf_ToggleMissionTimer( void )
 {
 	addConsoleMessage(_("Warning! This cheat is buggy.  We recommend to NOT use it."), DEFAULT_JUSTIFY,  SYSTEM_MESSAGE);
@@ -176,6 +204,50 @@ void	kf_PowerInfo( void )
 	for (i = 0; i < game.maxPlayers; i++)
 	{
 		console("Player %d: %d power", i, (int)getPower(i));
+	}
+}
+
+void kf_DamageMe(void)
+{
+#ifndef DEBUG
+	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
+	if (runningMultiplayer())
+	{
+		noMPCheatMsg();
+		return;
+	}
+#endif
+	for(DROID *psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid = psDroid->psNext)
+	{
+		if (psDroid->selected)
+		{
+			int val = psDroid->body - ((psDroid->originalBody / 100) *20);
+			if (val > 0)
+			{
+				psDroid->body = val;
+				addConsoleMessage(_("Ouch! Droid's health is down 20%!"), LEFT_JUSTIFY, SYSTEM_MESSAGE);
+			}
+			else
+			{
+				psDroid->body = 0;
+			}
+		}
+	}
+	for(STRUCTURE *psStruct = apsStructLists[selectedPlayer]; psStruct; psStruct = psStruct->psNext)
+	{
+		if (psStruct->selected)
+		{
+			int val = psStruct->body - ((structureBody(psStruct) / 100) *20);
+			if (val > 0)
+			{
+				psStruct->body = val;
+				addConsoleMessage(_("Ouch! Structure's health is down 20%!"), LEFT_JUSTIFY, SYSTEM_MESSAGE);
+			}
+			else
+			{
+				psStruct->body = 0;
+			}
+		}
 	}
 }
 
@@ -299,13 +371,9 @@ DROID	*psDroid;
 
 void	kf_CloneSelected( void )
 {
-	DROID		*psDroid;
-	DROID_TEMPLATE	sTemplate;
-	DROID_TEMPLATE	*sTemplate2 = NULL;
+	DROID_TEMPLATE	*sTemplate = NULL;
 	const int	limit = 10;	// make 10 clones
-	int             i;//, impact_side;
-	//const char *    msg;
-
+	const char *msg;
 #ifndef DEBUG
 	// Bail out if we're running a _true_ multiplayer game (to prevent MP cheating)
 	if (runningMultiplayer())
@@ -315,61 +383,52 @@ void	kf_CloneSelected( void )
 	}
 #endif
 
-	for (psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid=psDroid->psNext)
+	for (DROID *psDroid = apsDroidLists[selectedPlayer]; psDroid; psDroid=psDroid->psNext)
 	{
-		for (i = 0; psDroid->selected && i < limit; i++)
+		if (psDroid->selected)
 		{
-			// create a template based on the droid
-			if (!sTemplate2)
+			for (DROID_TEMPLATE *psTempl = apsDroidTemplates[selectedPlayer]; psTempl; psTempl = psTempl->psNext)
 			{
-				sTemplate2 = GetHumanDroidTemplate(psDroid->aName);
-				if (!sTemplate2)
-				{	// we now search the AI template list (apsStaticTemplates)
-					sTemplate2 = GetAIDroidTemplate(psDroid->aName);
+				if (!strcmp(psTempl->aName, psDroid->aName))
+				{
+					sTemplate = psTempl;
+					break;
 				}
 			}
-			if (!sTemplate2)
+
+			if (!sTemplate)
 			{
-				debug(LOG_ERROR, "We can't find the template for this droid: %s, id:%u, type:%d!", psDroid->aName, psDroid->id, psDroid->droidType);
+				debug(LOG_ERROR, "Cloning vat has been destoryed. We can't find the template for this droid: %s, id:%u, type:%d!", psDroid->aName, psDroid->id, psDroid->droidType);
 				return;
 			}
-			sTemplate = *sTemplate2;
-			templateSetParts(psDroid, &sTemplate);
 
-			// create a new droid
-			buildDroid(&sTemplate, psDroid->pos.x, psDroid->pos.y, psDroid->player, false, NULL);
-			/* // TODO psNewDroid is null, since we just sent a message, but haven't actually created the droid locally yet.
-			ASSERT_OR_RETURN(, psNewDroid != NULL, "Unable to build a unit");
-			addDroid(psNewDroid, apsDroidLists);
-			psNewDroid->body = psDroid->body;
-			for (impact_side = 0; impact_side < NUM_HIT_SIDES; impact_side=impact_side+1)
+			// create a new droid army
+			for (int i = 0; i < limit; i++)
 			{
-				psNewDroid->armour[impact_side][WC_KINETIC] = psDroid->armour[impact_side][WC_KINETIC];
-				psNewDroid->armour[impact_side][WC_HEAT] = psDroid->armour[impact_side][WC_HEAT];
+				DROID *psNewDroid = buildDroid(sTemplate, psDroid->pos.x + (i*12), psDroid->pos.y + (i*14), psDroid->player, false, NULL);
+				if (psNewDroid)
+				{
+					addDroid(psNewDroid, apsDroidLists);
+					psScrCBNewDroid = psNewDroid;
+					psScrCBNewDroidFact = NULL;
+					eventFireCallbackTrigger((TRIGGER_TYPE)CALL_NEWDROID);	// notify scripts so it will get assigned jobs
+					psScrCBNewDroid = NULL;
+					triggerEventDroidBuilt(psNewDroid, NULL);
+				}
+				else
+				{
+					debug(LOG_ERROR, "Cloning has failed for template:%s id:%d", sTemplate->pName, sTemplate->multiPlayerID);
+				}
 			}
-			psNewDroid->experience = psDroid->experience;
-			psNewDroid->rot.direction = psDroid->rot.direction;
-			if (!(psNewDroid->droidType == DROID_PERSON || cyborgDroid(psNewDroid) || psNewDroid->droidType == DROID_TRANSPORTER || psNewDroid->droidType == DROID_SUPERTRANSPORTER))
-			{
-				updateDroidOrientation(psNewDroid);
-			}
-		}
-		if (psNewDroid)
-		{
-			// Send a text message to all players, notifying them of
-			// the fact that we're cheating ourselves a new droid army
-			sasprintf((char**)&msg, _("Player %u is cheating him/herself a new droid army of %s(s)."), selectedPlayer, psNewDroid->aName);
+			sasprintf((char**)&msg, _("Player %u is cheating a new droid army of: %s."), selectedPlayer, psDroid->aName);
 			sendTextMessage(msg, true);
-			audio_PlayTrack(ID_SOUND_NEXUS_LAUGH1);
-			sTemplate2 = NULL;
-			psNewDroid->selected = true;
-			psNewDroid = NULL;
 			Cheated = true;
-			*/
+			audio_PlayTrack(ID_SOUND_NEXUS_LAUGH1);
+			return;
 		}
+		debug(LOG_INFO, "Nothing was selected?");
 	}
 }
-
 // --------------------------------------------------------------------------
 //
 ///* Prints out the date and time of the build of the game */
@@ -536,12 +595,13 @@ void	kf_FrameRate( void )
 	          frameRate(), loopPieCount, loopPolyCount, loopStateChanges));
 	if (runningMultiplayer())
 	{
-			CONPRINTF(ConsoleString,(ConsoleString,
-						"NETWORK:  Bytes: s-%d r-%d  Packets: s-%d r-%d",
-						NETgetBytesSent(),
-						NETgetBytesRecvd(),
-						NETgetPacketsSent(),
-						NETgetPacketsRecvd() ));
+		CONPRINTF(ConsoleString, (ConsoleString, "NETWORK:  Bytes: s-%d r-%d  Uncompressed Bytes: s-%d r-%d  Packets: s-%d r-%d",
+		                          NETgetStatistic(NetStatisticRawBytes, true),
+		                          NETgetStatistic(NetStatisticRawBytes, false),
+		                          NETgetStatistic(NetStatisticUncompressedBytes, true),
+		                          NETgetStatistic(NetStatisticUncompressedBytes, false),
+		                          NETgetStatistic(NetStatisticPackets, true),
+		                          NETgetStatistic(NetStatisticPackets, false)));
 	}
 	gameStats = !gameStats;
 	CONPRINTF(ConsoleString, (ConsoleString,"Built at %s on %s",__TIME__,__DATE__));
@@ -811,6 +871,11 @@ void kf_MapCheck(void)
 /* Raises the tile under the mouse */
 void	kf_RaiseTile( void )
 {
+	if (runningMultiplayer())
+	{
+		return;  // Don't desynch if pressing 'W'...
+	}
+
 	raiseTile(mouseTileX, mouseTileY);
 }
 
@@ -819,6 +884,11 @@ void	kf_RaiseTile( void )
 /* Lowers the tile under the mouse */
 void	kf_LowerTile( void )
 {
+	if (runningMultiplayer())
+	{
+		return;  // Don't desynch if pressing 'A'...
+	}
+
 	lowerTile(mouseTileX, mouseTileY);
 }
 
@@ -2243,24 +2313,6 @@ void kf_SelectAllCombatCyborgs()
 void	kf_SelectAllSameType( void )
 {
 	selDroidSelection(selectedPlayer,DS_BY_TYPE,DST_ALL_SAME,false);
-}
-
-// --------------------------------------------------------------------------
-void	kf_SetDroidRangeShort( void )
-{
-	kfsf_SetSelectedDroidsState(DSO_ATTACK_RANGE,DSS_ARANGE_SHORT);
-}
-
-// --------------------------------------------------------------------------
-void	kf_SetDroidRangeDefault( void )
-{
-	kfsf_SetSelectedDroidsState(DSO_ATTACK_RANGE,DSS_ARANGE_DEFAULT);
-}
-
-// --------------------------------------------------------------------------
-void	kf_SetDroidRangeLong( void )
-{
-	kfsf_SetSelectedDroidsState(DSO_ATTACK_RANGE,DSS_ARANGE_LONG);
 }
 
 // --------------------------------------------------------------------------

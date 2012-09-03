@@ -33,6 +33,8 @@
 #include "wzm.h"
 #include "pietypes.h"
 
+#include <vector>
+
 // How high up do we want to stop looking
 #define DROID_VIS_UPPER	100
 
@@ -65,7 +67,7 @@ struct iSurface
 //
 //*************************************************************************
 
-struct IMAGEDEF
+struct ImageDef
 {
 	unsigned int TPageID;   /**< Which associated file to read our info from */
 	unsigned int Tu;        /**< First vertex coordinate */
@@ -76,12 +78,16 @@ struct IMAGEDEF
 	int YOffset;            /**< Y offset into source position */
 };
 
-#define MAX_NUM_TPAGEIDS 16
 struct IMAGEFILE
 {
-	int NumImages;          /**< Number of images contained here */
-	int TPageIDs[MAX_NUM_TPAGEIDS];	/**< OpenGL Texture IDs */
-	IMAGEDEF *ImageDefs;    /**< Stored images */
+	struct Page
+	{
+		int id;    /// OpenGL texture ID.
+		int size;  /// Size of texture in pixels. (Should be square.)
+	};
+
+	std::vector<Page> pages;          /// Texture pages.
+	std::vector<ImageDef> imageDefs;  /// Stored images.
 };
 
 #endif // _ivisdef_h

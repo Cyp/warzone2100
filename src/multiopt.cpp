@@ -59,7 +59,6 @@
 // send complete game info set!
 void sendOptions()
 {
-	bool dummy = true;
 	unsigned int i;
 
 	if (!NetPlay.isHost || !bHosted)  // Only host should act, and only if the game hasn't started yet.
@@ -73,9 +72,9 @@ void sendOptions()
 	// First send information about the game
 	NETuint8_t(&game.type);
 	NETstring(game.map, 128);
+	NETbin(game.hash.bytes, game.hash.Bytes);
 	NETuint8_t(&game.maxPlayers);
 	NETstring(game.name, 128);
-	NETbool(&dummy);
 	NETuint32_t(&game.power);
 	NETuint8_t(&game.base);
 	NETuint8_t(&game.alliance);
@@ -119,30 +118,10 @@ void sendOptions()
 }
 
 // ////////////////////////////////////////////////////////////////////////////
-/*!
- * check the wdg files that are being used.
- */
-static bool checkGameWdg(const char *nm)
-{
-	LEVEL_DATASET *lev;
-
-	for (lev = psLevels; lev; lev = lev->psNext)
-	{
-		if (strcmp(lev->pName, nm) == 0)
-		{
-			return true;
-		}
-	}
-
-	return false;
-}
-
-// ////////////////////////////////////////////////////////////////////////////
 // options for a game. (usually recvd in frontend)
 void recvOptions(NETQUEUE queue)
 {
 	unsigned int i;
-	bool dummy = true;
 
 	debug(LOG_NET, "Receiving options from host");
 	NETbeginDecode(queue, NET_OPTIONS);
@@ -150,9 +129,9 @@ void recvOptions(NETQUEUE queue)
 	// Get general information about the game
 	NETuint8_t(&game.type);
 	NETstring(game.map, 128);
+	NETbin(game.hash.bytes, game.hash.Bytes);
 	NETuint8_t(&game.maxPlayers);
 	NETstring(game.name, 128);
-	NETbool(&dummy);
 	NETuint32_t(&game.power);
 	NETuint8_t(&game.base);
 	NETuint8_t(&game.alliance);
@@ -215,24 +194,25 @@ void recvOptions(NETQUEUE queue)
 			widgSetSliderPos(psWScreen, MULTIOP_SKSLIDE + i, game.skDiff[i]);
 		}
 	}
-	debug(LOG_NET, "Rebuilding map list");
+	debug(LOG_INFO, "Rebuilding map list");
 	// clear out the old level list.
 	levShutDown();
 	levInitialise();
+	setCurrentMap(NULL, 42);
 	rebuildSearchPath(mod_multiplay, true);	// MUST rebuild search path for the new maps we just got!
 	buildMapList();
 	// See if we have the map or not
-	if (!checkGameWdg(game.map))
+	if (levFindDataSet(game.map, &game.hash) == NULL)
 	{
 		uint32_t player = selectedPlayer;
 
-		debug(LOG_NET, "Map was not found, requesting map %s from host.", game.map);
+		debug(LOG_INFO, "Map was not found, requesting map %s from host.", game.map);
 		// Request the map from the host
 		NETbeginEncode(NETnetQueue(NET_HOST_ONLY), NET_FILE_REQUESTED);
 		NETuint32_t(&player);
 		NETend();
 
-		addConsoleMessage("MAP REQUESTED!",DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
+		addConsoleMessage("MAP REQUESTED!", DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
 	}
 	else
 	{
@@ -366,14 +346,6 @@ void addTemplateBack(unsigned player, DROID_TEMPLATE *psNew)
 }
 
 // ////////////////////////////////////////////////////////////////////////////
-// setup templates
-bool multiTemplateSetup(void)
-{
-	// do nothing now
-	return true;
-}
-
-// ////////////////////////////////////////////////////////////////////////////
 static bool gameInit(void)
 {
 	UDWORD			player;
@@ -406,10 +378,12 @@ static bool gameInit(void)
 		game.skDiff[scavengerPlayer()] = DIFF_SLIDER_STOPS / 2;
 	}
 
-	if (NetPlay.isHost)	// add oil drums
+	unsigned playerCount = 0;
+	for (int index = 0; index < game.maxPlayers; ++index)
 	{
-		addOilDrum(NetPlay.playercount * 2);
+		playerCount += NetPlay.players[index].ai >= 0 || NetPlay.players[index].allocated;
 	}
+	addOilDrum(playerCount * 2);  // Calculating playerCount instead of using NetPlay.playercount, since the latter seems to be 0 for non-hosts.
 
 	playerResponding();			// say howdy!
 

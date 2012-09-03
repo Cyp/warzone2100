@@ -133,6 +133,7 @@ static PIELIGHT getBlueprintColour(STRUCT_STATES state);
 static void NetworkDisplayPlainForm(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, WZ_DECL_UNUSED PIELIGHT *pColours);
 static void NetworkDisplayImage(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, WZ_DECL_UNUSED PIELIGHT *pColours);
 void NotifyUserOfError(char *msg);
+extern bool writeGameInfo(const char *pFileName); // Used to help debug issues when we have fatal errors & crash handler testing.
 /********************  Variables  ********************/
 // Should be cleaned up properly and be put in structures.
 
@@ -309,7 +310,6 @@ static std::vector<Blueprint> blueprints;
 
 #define	TARGET_TO_SENSOR_TIME	((4*(GAME_TICKS_PER_SEC))/5)
 #define	DEST_TARGET_TIME	(GAME_TICKS_PER_SEC/4)
-#define STRUCTURE_ANIM_RATE 4
 
 /// The distance the selection box will pulse
 #define BOX_PULSE_SIZE  10
@@ -859,6 +859,7 @@ void draw3DScene( void )
 		ASSERT(false, "Yes, this is a assert.  This should not happen on release builds! Use --noassert to bypass in debug builds.");
 		debug(LOG_WARNING, " *** Warning!  You have compiled in debug mode! ***");
 #endif
+		writeGameInfo("WZdebuginfo.txt");		//also test writing out this file.
 		debug(LOG_FATAL, "Forcing a segfault! (crash handler test)");
 		// and here comes the crash
 		*crash = 0x3;
@@ -1742,19 +1743,6 @@ void displayBlueprints(void)
 				blueprints.push_back(blueprint);
 			}
 		}
-		else
-		{
-			ASSERT(deliveryPointToMove != NULL, "Expected a delivery point.");
-			if (deliveryPointToMove)
-			{
-				// it's a droid (from the debug menu) or a delivery point
-				FLAG_POSITION pos = *deliveryPointToMove;
-				pos.coords.x = world_coord(sBuildDetails.x)+world_coord(1)/2;
-				pos.coords.y = world_coord(sBuildDetails.y)+world_coord(1)/2;
-				pos.coords.z = map_Height(pos.coords.x, pos.coords.y) + world_coord(1)/8;
-				renderDeliveryPoint(&pos, true);
-			}
-		}
 	}
 
 	// now we draw the blueprints for all ordered buildings
@@ -1788,6 +1776,8 @@ void displayBlueprints(void)
 	{
 		blueprint->renderBlueprint();
 	}
+
+	renderDeliveryRepos();
 }
 
 /// Draw Factory Delivery Points
@@ -2182,7 +2172,7 @@ void renderProximityMsg(PROXIMITY_DISPLAY *psProxDisp)
 	pie_MatRotY(-player.r.y);
 	pie_MatRotX(-player.r.x);
 
-	pie_Draw3DShape(proxImd, getModularScaledGraphicsTime(1000, 4), 0, WZCOL_WHITE, pie_ADDITIVE, 192);
+	pie_Draw3DShape(proxImd, getModularScaledGraphicsTime(proxImd->animInterval, proxImd->numFrames), 0, WZCOL_WHITE, pie_ADDITIVE, 192);
 
 	//get the screen coords for determining when clicked on
 	calcFlagPosScreenCoords(&x, &y, &r);
@@ -2259,11 +2249,10 @@ void	renderStructure(STRUCTURE *psStructure)
 	colour = getPlayerColour(psStructure->player);
 	animFrame = 0;
 
-	/* Power stations and factories have pulsing lights. Hack for fortresses, since they need team colour. */
-	if (!defensive && psStructure->sDisplay.imd->numFrames > 0 && !(bMultiPlayer && psStructure->pStructureType->type == REF_BLASTDOOR))
+	if (strImd->numFrames > 0)
 	{
 		// Calculate an animation frame
-		animFrame = getModularScaledGraphicsTime(STRUCTURE_ANIM_RATE*GAME_TICKS_PER_SEC, STRUCTURE_ANIM_RATE);
+		animFrame = getModularScaledGraphicsTime(strImd->animInterval, strImd->numFrames);
 	}
 
 	// -------------------------------------------------------------------------------
@@ -2277,12 +2266,7 @@ void	renderStructure(STRUCTURE *psStructure)
 
 	dv.x = structX - player.p.x;
 	dv.z = -(structY - player.p.z);
-	if (defensive || structureIsBlueprint(psStructure))
-	{
-		dv.y = psStructure->pos.z;
-	} else {
-		dv.y = map_TileHeight(map_coord(structX), map_coord(structY));
-	}
+	dv.y = psStructure->pos.z;
 	/* Push the indentity matrix */
 	pie_MatBegin();
 
@@ -2335,7 +2319,7 @@ void	renderStructure(STRUCTURE *psStructure)
 	}
 
 	//first check if partially built - ANOTHER HACK!
-	if (psStructure->status == SS_BEING_BUILT || psStructure->status == SS_BEING_DEMOLISHED)
+	if (psStructure->status == SS_BEING_BUILT)
 	{
 		if (psStructure->prebuiltImd != NULL)
 		{
@@ -2469,7 +2453,7 @@ void	renderStructure(STRUCTURE *psStructure)
 
 									pie_MatRotY(-player.r.y);
 									pie_MatRotX(-player.r.x);
-									pie_Draw3DShape(pRepImd, getModularScaledGraphicsTime(100, pRepImd->numFrames), colour, buildingBrightness, pie_ADDITIVE, 192);
+									pie_Draw3DShape(pRepImd, getModularScaledGraphicsTime(pRepImd->animInterval, pRepImd->numFrames), colour, buildingBrightness, pie_ADDITIVE, 192);
 
 									pie_MatRotX(player.r.x);
 									pie_MatRotY(player.r.y);
@@ -2581,7 +2565,7 @@ void	renderStructure(STRUCTURE *psStructure)
 						pie_TRANSLATE(psStructure->sDisplay.imd->connectors->x, psStructure->sDisplay.imd->connectors->z,
 						             psStructure->sDisplay.imd->connectors->y);
 						lImd = getImdFromIndex(MI_LANDING);
-						pie_Draw3DShape(lImd, getModularScaledGraphicsTime(1024, lImd->numFrames), colour, buildingBrightness, 0, 0);
+						pie_Draw3DShape(lImd, getModularScaledGraphicsTime(lImd->animInterval, lImd->numFrames), colour, buildingBrightness, 0, 0);
 						pie_MatEnd();
 					}
 				}
@@ -2617,7 +2601,7 @@ void	renderDeliveryPoint(FLAG_POSITION *psPosition, bool blueprint)
 	dv.y = psPosition->coords.z;
 
 	/* Push the indentity matrix */
-	pie_MatBegin();
+	ScopedPieMatrix matScope;
 
 	pie_TRANSLATE(dv.x,dv.y,dv.z);
 
@@ -2638,7 +2622,7 @@ void	renderDeliveryPoint(FLAG_POSITION *psPosition, bool blueprint)
 
 	if (blueprint)
 	{
-		colour = (buildState == BUILD3D_VALID) ? WZCOL_BLUEPRINT_VALID : WZCOL_BLUEPRINT_INVALID;
+		colour = deliveryReposValid() ? WZCOL_BLUEPRINT_VALID : WZCOL_BLUEPRINT_INVALID;
 	}
 	else
 	{
@@ -2658,14 +2642,12 @@ void	renderDeliveryPoint(FLAG_POSITION *psPosition, bool blueprint)
 	psPosition->screenX = x;
 	psPosition->screenY = y;
 	psPosition->screenR = r;
-
-	pie_MatEnd();
 }
 
 /// Draw a piece of wall
 static bool	renderWallSection(STRUCTURE *psStructure)
 {
-	int			structX, structY, height, ecmFlag = 0;
+	int			structX, structY, ecmFlag = 0;
 	PIELIGHT		brightness;
 	SDWORD			rotation;
 	Vector3i			dv;
@@ -2679,7 +2661,6 @@ static bool	renderWallSection(STRUCTURE *psStructure)
 			ecmFlag = pie_ECM;
 		}
 
-		height = psStructure->sDisplay.imd->max.y;
 		psStructure->sDisplay.frameNumber = currentGameFrame;
 		/* Get it's x and y coordinates so we don't have to deref. struct later */
 		structX = psStructure->pos.x;
@@ -2691,20 +2672,9 @@ static bool	renderWallSection(STRUCTURE *psStructure)
 		/* Establish where it is in the world */
 		dv.x = structX - player.p.x;
 		dv.z = -(structY - player.p.z);
-		dv.y = map_Height(structX, structY);
+		dv.y = psStructure->pos.z;
 
-		if (psStructure->pStructureType->type == REF_GATE && psStructure->state == SAS_OPEN)
-		{
-			dv.y -= height;
-		}
-		else if (psStructure->pStructureType->type == REF_GATE && psStructure->state == SAS_OPENING)
-		{
-			dv.y -= (height * std::max<int>(graphicsTime + GAME_TICKS_PER_UPDATE - psStructure->lastStateTime, 0)) / SAS_OPEN_SPEED;
-		}
-		else if (psStructure->pStructureType->type == REF_GATE && psStructure->state == SAS_CLOSING)
-		{
-			dv.y -= height - (height * std::max<int>(graphicsTime - psStructure->lastStateTime, 0)) / SAS_OPEN_SPEED;
-		}
+		dv.y -= gateCurrentOpenHeight(psStructure, graphicsTime, 1);  // Make gate stick out by 1 unit, so that the tops of ┼ gates can safely have heights differing by 1 unit.
 
 		/* Push the indentity matrix */
 		pie_MatBegin();
@@ -2716,9 +2686,7 @@ static bool	renderWallSection(STRUCTURE *psStructure)
 		pie_MatRotY(-rotation);
 
 		/* Actually render it */
-		if ( (psStructure->status == SS_BEING_BUILT ) ||
-			(psStructure->status == SS_BEING_DEMOLISHED ) ||
-			(psStructure->status == SS_BEING_BUILT && psStructure->pStructureType->type == REF_RESOURCE_EXTRACTOR) )
+		if (psStructure->status == SS_BEING_BUILT)
 		{
 			pie_Draw3DShape(psStructure->sDisplay.imd, 0, getPlayerColour(psStructure->player),
 					brightness, pie_HEIGHT_SCALED|pie_SHADOW|ecmFlag, structHeightScale(psStructure) * pie_RAISE_SCALE);
@@ -2900,7 +2868,7 @@ static void drawWeaponReloadBar(BASE_OBJECT *psObj, WEAPON *psWeap, int weapon_s
 		if (psObj->type == OBJ_DROID && isVtolDroid((DROID *)psObj))
 		{
 			//deal with VTOLs
-			firingStage = getNumAttackRuns((DROID *)psObj, weapon_slot) - ((DROID *)psObj)->sMove.iAttackRuns[weapon_slot];
+			firingStage = getNumAttackRuns((DROID *)psObj, weapon_slot) - ((DROID *)psObj)->asWeaps[weapon_slot].usedAmmo;
 
 			//compare with max value
 			interval = getNumAttackRuns((DROID *)psObj, weapon_slot);
@@ -3164,11 +3132,8 @@ static void	drawStructureSelections( void )
 		if (mouseDown(getRightClickOrders()?MOUSE_LMB:MOUSE_RMB))
 		{
 			psStruct = (STRUCTURE*)psClickedOn;
-			if(psStruct->status==SS_BUILT)
-			{
-				drawStructureHealth(psStruct);
-			}
-			else if(psStruct->status == SS_BEING_BUILT)
+			drawStructureHealth(psStruct);
+			if(psStruct->status == SS_BEING_BUILT)
 			{
 				drawStructureBuildProgress(psStruct);
 			}
@@ -3299,7 +3264,8 @@ static void	drawDroidSelections( void )
 			}
 			mulH = (float)psDroid->body / (float)psDroid->originalBody;
 			damage = mulH * (float)psDroid->sDisplay.screenR;// (((psDroid->sDisplay.screenR*10000)/100)*damage)/10000;
-			if(damage>psDroid->sDisplay.screenR) damage = psDroid->sDisplay.screenR;
+			if (damage > psDroid->sDisplay.screenR)
+				damage = psDroid->sDisplay.screenR;
 
 			damage *=2;
 			scrX = psDroid->sDisplay.screenX;
@@ -3331,20 +3297,15 @@ static void	drawDroidSelections( void )
 				pie_BoxFill(scrX - scrR, scrY + scrR+4, scrX - scrR + damage, scrY + scrR + 5, powerColShadow);
 
 				/* Write the droid rank out */
-				if((scrX+scrR)>0 && (scrY+scrR)>0 && (scrX-scrR) < pie_GetVideoBufferWidth() && (scrY-scrR) < pie_GetVideoBufferHeight())
+				if (	(scrX + scrR) > 0
+					&&	(scrX - scrR) < pie_GetVideoBufferWidth()
+					&&	(scrY + scrR) > 0
+					&&	(scrY - scrR) < pie_GetVideoBufferHeight())
 				{
 					drawDroidRank(psDroid);
 					drawDroidSensorLock(psDroid);
-
-					if ((psDroid->droidType == DROID_COMMAND) ||
-						hasCommander(psDroid))
-					{
-						drawDroidCmndNo(psDroid);
-					}
-					else if(psDroid->group!=UBYTE_MAX)
-					{
-						drawDroidGroupNumber(psDroid);
-					}
+					drawDroidCmndNo(psDroid);
+					drawDroidGroupNumber(psDroid);
 				}
 			}
 
@@ -3354,8 +3315,6 @@ static void	drawDroidSelections( void )
 			}
 		}
 	}
-
-
 
 	/* Are we over an enemy droid */
 	if(bMouseOverDroid && !bMouseOverOwnDroid)
@@ -3415,7 +3374,8 @@ static void	drawDroidSelections( void )
 					mulH = (float)psDroid->body / (float)psDroid->originalBody;
 				}
 				damage = mulH * (float)psDroid->sDisplay.screenR;// (((psDroid->sDisplay.screenR*10000)/100)*damage)/10000;
-				if(damage>psDroid->sDisplay.screenR) damage = psDroid->sDisplay.screenR;
+				if (damage > psDroid->sDisplay.screenR)
+					damage = psDroid->sDisplay.screenR;
 				damage *=2;
 				scrX = psDroid->sDisplay.screenX;
 				scrY = psDroid->sDisplay.screenY;
@@ -3423,7 +3383,10 @@ static void	drawDroidSelections( void )
 
 				/* Yeah, yeah yeah - hardcoded palette entries - need to change to #defined colour names */
 				/* Three DFX clips properly right now - not sure if software does */
-				if((scrX+scrR)>0 && (scrY+scrR)>0 && (scrX-scrR) < pie_GetVideoBufferWidth() && (scrY-scrR) < pie_GetVideoBufferHeight())
+				if (	(scrX + scrR) > 0
+					&&	(scrX - scrR) < pie_GetVideoBufferWidth()
+					&&	(scrY + scrR) > 0
+					&&	(scrY - scrR) < pie_GetVideoBufferHeight())
 				{
 					if(!driveModeActive() || driveIsDriven(psDroid)) {
 						boxCol = WZCOL_WHITE;
@@ -3455,7 +3418,7 @@ static void	drawDroidSelections( void )
 				if(psDroid->bTargetted && (psDroid->visible[selectedPlayer] == UBYTE_MAX))
 				{
 					scrX = psDroid->sDisplay.screenX;
-					scrY = psDroid->sDisplay.screenY - 8;
+					scrY = psDroid->sDisplay.screenY;
 					index = IMAGE_BLUE1 + getModularScaledRealTime(1020, 5);
 					iV_DrawImage(IntImages,index,scrX,scrY);
 				}
@@ -3470,7 +3433,7 @@ static void	drawDroidSelections( void )
 			if(psFeature->bTargetted)
 			{
 				scrX = psFeature->sDisplay.screenX;
-				scrY = psFeature->sDisplay.screenY - (psFeature->sDisplay.imd->max.y / 4);
+				scrY = psFeature->sDisplay.screenY;
 				iV_DrawImage(IntImages,getTargettingGfx(),scrX,scrY);
 			}
 		}
@@ -3481,91 +3444,68 @@ static void	drawDroidSelections( void )
 
 /* ---------------------------------------------------------------------------- */
 /// X offset to display the group number at
-#define GN_X_OFFSET	(28)
-/// Y offset to display the group number at
-#define GN_Y_OFFSET (17)
+#define GN_X_OFFSET	(8)
 /// Draw the number of the group the droid is in next to the droid
 static void	drawDroidGroupNumber(DROID *psDroid)
 {
-UWORD	id;
-UDWORD	id2;
-bool	bDraw;
-SDWORD	xShift,yShift;
+	UWORD id = UWORD_MAX;
 
-	bDraw = true;
-
-	id = id2 = UDWORD_MAX;
-
-	/* Is the unit in a group? */
-	if(hasCommander(psDroid))
+	switch(psDroid->group)
 	{
-		id2 = IMAGE_GN_STAR;
-
+	case 0:
+		id = IMAGE_GN_0;
+		break;
+	case 1:
+		id = IMAGE_GN_1;
+		break;
+	case 2:
+		id = IMAGE_GN_2;
+		break;
+	case 3:
+		id = IMAGE_GN_3;
+		break;
+	case 4:
+		id = IMAGE_GN_4;
+		break;
+	case 5:
+		id = IMAGE_GN_5;
+		break;
+	case 6:
+		id = IMAGE_GN_6;
+		break;
+	case 7:
+		id = IMAGE_GN_7;
+		break;
+	case 8:
+		id = IMAGE_GN_8;
+		break;
+	case 9:
+		id = IMAGE_GN_9;
+		break;
+	default:
+		break;
 	}
-	//else
+
+	if(id != UWORD_MAX)
 	{
-		switch(psDroid->group)
-		{
-		case 0:
-			id = IMAGE_GN_0;
-			break;
-		case 1:
-			id = IMAGE_GN_1;
-			break;
-		case 2:
-			id = IMAGE_GN_2;
-			break;
-		case 3:
-			id = IMAGE_GN_3;
-			break;
-		case 4:
-			id = IMAGE_GN_4;
-			break;
-		case 5:
-			id = IMAGE_GN_5;
-			break;
-		case 6:
-			id = IMAGE_GN_6;
-			break;
-		case 7:
-			id = IMAGE_GN_7;
-			break;
-		case 8:
-			id = IMAGE_GN_8;
-			break;
-		case 9:
-			id = IMAGE_GN_9;
-			break;
-		default:
-			bDraw = false;
-			break;
-		}
-	}
-	if(bDraw)
-	{
-		xShift = GN_X_OFFSET;  // yeah yeah, I know
-		yShift = GN_Y_OFFSET;
-		xShift = ((xShift*pie_GetResScalingFactor())/100);
-		yShift = ((yShift*pie_GetResScalingFactor())/100);
+		int xShift = psDroid->sDisplay.screenR + GN_X_OFFSET;
+		int yShift = psDroid->sDisplay.screenR;
 		iV_DrawImage(IntImages,id,psDroid->sDisplay.screenX-xShift,psDroid->sDisplay.screenY+yShift);
-		if(id2!=UDWORD_MAX)
-		{
-			iV_DrawImage(IntImages,id2,psDroid->sDisplay.screenX-xShift,psDroid->sDisplay.screenY+yShift-8);
-		}
 	}
 }
 
+/// X offset to display the group number at
+#define CMND_STAR_X_OFFSET	(6)
+#define CMND_GN_Y_OFFSET	(8)
 /// Draw the number of the commander the droid is assigned to
 static void	drawDroidCmndNo(DROID *psDroid)
 {
-UWORD	id;
-UDWORD	id2;
-bool	bDraw;
-SDWORD	xShift,yShift, index;
+	SDWORD	xShift,yShift, index;
+	UDWORD	id2;
+	UWORD	id;
+	bool	bDraw = true;
 
-	bDraw = true;
-
-	id = id2 = UDWORD_MAX;
+	id = UWORD_MAX;
 
 	id2 = IMAGE_GN_STAR;
 	index = SDWORD_MAX;
@@ -3613,11 +3553,9 @@ SDWORD	xShift,yShift, index;
 
 	if(bDraw)
 	{
-		xShift = GN_X_OFFSET;  // yeah yeah, I know
-		yShift = GN_Y_OFFSET;
-		xShift = ((xShift*pie_GetResScalingFactor())/100);
-		yShift = ((yShift*pie_GetResScalingFactor())/100);
-		iV_DrawImage(IntImages,id2,psDroid->sDisplay.screenX-xShift-6,psDroid->sDisplay.screenY+yShift);
+		xShift = psDroid->sDisplay.screenR + GN_X_OFFSET;
+		yShift = psDroid->sDisplay.screenR - CMND_GN_Y_OFFSET;
+		iV_DrawImage(IntImages,id2,psDroid->sDisplay.screenX-xShift-CMND_STAR_X_OFFSET,psDroid->sDisplay.screenY+yShift);
 		iV_DrawImage(IntImages,id,psDroid->sDisplay.screenX-xShift,psDroid->sDisplay.screenY+yShift);
 	}
 }
@@ -3626,31 +3564,40 @@ SDWORD	xShift,yShift, index;
 
 /**	Get the onscreen coordinates of a droid so we can draw a bounding box
  * This need to be severely speeded up and the accuracy increased to allow variable size bouding boxes
+ * @todo Remove all magic numbers and hacks
  */
 void calcScreenCoords(DROID *psDroid)
 {
 	/* Get it's absolute dimensions */
-	const Vector3i origin(0, 0, 0);
-	Vector2i center(0, 0);
-	UDWORD radius;
+	const BODY_STATS *psBStats = asBodyStats + psDroid->asBits[COMP_BODY].nStat;
+	Vector3i origin;
+	Vector2i center;
+	int wsRadius = 22; // World space radius, 22 = magic minimum
+	float radius;
 
-	/* get the screen corrdinates */
-	const int cZ = pie_RotateProject(&origin, &center);
-
-	// TODO: compute the droid's radius (using min/max for x,y,z)
-	if (psDroid->droidType == DROID_TRANSPORTER || psDroid->droidType == DROID_SUPERTRANSPORTER)
+	// NOTE: This only takes into account body, but seems "good enough"
+	if (psBStats && psBStats->pIMD)
 	{
-		radius = 45;
+		wsRadius = MAX(wsRadius, psBStats->pIMD->radius);
+	}
+
+	origin = Vector3i(0, wsRadius, 0); // take the center of the object
+
+	/* get the screen coordinates */
+	// FP12_SHIFT-STRETCHED_Z_SHIFT is the shift of the scaling on the depth returned
+	const float cZ = pie_RotateProject(&origin, &center) / (float) (1 << (FP12_SHIFT-STRETCHED_Z_SHIFT));
+
+	//Watermelon:added a crash protection hack...
+	if (cZ >= 0)
+	{
+		// 330 is the near plane depth from pie_PerspectiveBegin
+		// not sure where magic comes from, could be another 1<<FP12_SHIFT-STRETCHED_Z_SHIFT
+		const int magic = 4;
+		radius = (wsRadius * 330 * magic) / cZ;
 	}
 	else
 	{
-		radius = 22;
-	}
-
-	//Watermelon:added a crash protection hack...
-	if (cZ != 0)
-	{
-		radius = (radius * pie_GetResScalingFactor()) * 80 / cZ;
+		radius = 1; // 1 just in case some other code assumes radius != 0
 	}
 
 	/* Deselect all the droids if we've released the drag box */
@@ -3666,7 +3613,6 @@ void calcScreenCoords(DROID *psDroid)
 			}
 		}
 	}
-	center.y -= 4;
 
 	/* Store away the screen coordinates so we can select the droids without doing a trasform */
 	psDroid->sDisplay.screenX = center.x;
@@ -4311,7 +4257,9 @@ static void	drawDroidRank(DROID *psDroid)
 	if(gfxId!=UDWORD_MAX)
 	{
 		/* Render the rank graphic at the correct location */ // remove hardcoded numbers?!
-		iV_DrawImage(IntImages,(UWORD)gfxId,psDroid->sDisplay.screenX+20,psDroid->sDisplay.screenY+8);
+		iV_DrawImage(IntImages,(UWORD)gfxId,
+					 psDroid->sDisplay.screenX+psDroid->sDisplay.screenR + 8,
+					 psDroid->sDisplay.screenY+psDroid->sDisplay.screenR);
 	}
 }
 
@@ -4324,8 +4272,7 @@ static void	drawDroidSensorLock(DROID *psDroid)
 	if (orderState(psDroid, DORDER_FIRESUPPORT))
 	{
 		/* Render the sensor graphic at the correct location - which is what?!*/
-		iV_DrawImage(IntImages,IMAGE_GN_STAR,psDroid->sDisplay.screenX+20,
-			psDroid->sDisplay.screenY-20);
+		iV_DrawImage(IntImages,IMAGE_GN_STAR, psDroid->sDisplay.screenX, psDroid->sDisplay.screenY);
 	}
 }
 

@@ -1,3 +1,177 @@
+2012-08-05: Version 3.1 rc1
+ * General:
+   * Change: Allow multiple AIs with similar names (commit:ee95d785bdfd72a490863d7cdb3f504f88f9eecd)
+   * Change: Increase the maximum number of terrain tiles (commit:ab44eafb7bd1daa2d0f4efe367673b4c2985a05d)
+   * Change: No longer save last map played (ticket:3618, commit:398f77ede082063bd1bc607d5814e9630f663967)
+   * Fix: Saving the game might crash it (ticket:3620, commit:fdb1c0b52153d3368ae79e8f0befdd2744b43692)
+   * Fix: Qt backend compatibility with Qt 4.8.2 (ticket:3562, commit:df32833ab8b17e6db5815b7eca9f5fe01a5b7f8f)
+   * Fix: Scavengers in challenges were always disabled (ticket:3630, commit:95677b02b9959b05372e7dc10286fe184bfd6cdd)
+   * Fix: Moving repair delivery points (ticket:3581, commit:caabd96741fb3113dc96127ae32826ada643992a)
+   * Fix: Destroyed research lab can no longer block research (ticket:3570, commit:6a04b6ad677678e1d824209dda45a70f85b64a96)
+   * Fix: Do not halt production on template becoming redundant (commit:7621581c8f76f3b7a774182cd3b5eee8e26b7954)
+   * Fix: Do not require texture_env_crossbar for shaders (ticket:3575, ticket:3629, commit:64a3cc13deda9a59aae2cf0705c68dbe3eadeaa8)
+   * Fix: Various memory issues (commit:032956e649e69aa51edd80787c9c94bf2c08d164, commit:88e94391669e54808b2d6f40cba994d3501efb08)
+   * Fix: Possible crash when delivery points are removed (commit:6382bbb08ea7e6ca93a0ba83fdb65952778c962a, ticket:2041)
+   * Fix: Fix loading of campaign savegames (commit:1461b3a5a81b72381bc3cc3dbc57bbd2f5ce22a7, commit:9784c655af2a66bd541268e2c9e6f19fcd1ac200)
+   * Fix: Terrain rendering should now be more visually accurate (ticket:3621, commit:087ab8c5058730925c747dcdf14c8319319b3929)
+
+2012-06-20: Version 3.1 beta11
+ * General:
+   * Change: CB sensor also defends allies (commit:313738ed235c69c64c83eb9b987d63efc95d8782)
+   * Change: Structures with no cost to build (oil derricks) deconstruct when abandoned, taking one minute for 100% build progress (commit:5ba90fec427096f6016867852ce696126514d378)
+   * Change: Queue building on burning oil wells, trucks wait until the fire stops (commit:353357b1b6f3b8a12131abd7c2c2cef571402e5b)
+   * Fix: Pathfinding improvements (commit:d11516795a7d98a6bcf0cdeafe159435108344a4, commit:57a56f21c372e268a645e6312b3f1c5a95a98000, commit:f7c6e38aa8e06051c6ac6e42ab9bbaf1b760c9e8)
+   * Fix: Loading of rearm pads in savegames (ticket:3518, commit:eb3001bd2fb6c0494abb3677cd05f62c1b0d8a4a)
+   * Fix: CB fire against mobile targets (ticket:3529, commit:193eba2a9f8d4a5fc2dd6ed58dabe4c42e1eaa1a)
+   * Fix: Weapon reloading (commit:74d8086132a3f847ea13b88254096fe68a30474b)
+   * Fix: Correct unit count of commanders after loading a savegame (ticket:3062, ticket:3513, commit:b3f3b089f1438bf66fad0e3d4db4447bd2dd6d23)
+   * Fix: Correct factory numbers after loading a savegame (ticket:3384, commit:737b3d9d24ab1634dafd09558fc8b8a5354ffa9c)
+   * Fix: Show correct number of selected units (ticket:3479, commit:22799c2b2607949b1920e8d1f143311c167f7a39)
+   * Fix: Player switching in debug mode (ticket:3264, commit:4a2f7d4399649662f33d146cbe97a12110b8995b)
+ * Graphics:
+   * Change: Support texture animations on structures (commit:190c7a99cccc9e831a49712ec431b194f0b65cb8, commit:2d0a089bad6b6b2fdca75556444a66e07ad3dbaa, commit:b59fe8bdb587671c8a382887c10ce804a1d1cd9a, commit:07a2a9671b32d4817942739de723f380c7b88cc7, commit:e636d41472762f0573979c1f05ada2e1484e4eca, commit:da433789c3e272c9c22307b6e74eeb81b2925e07)
+   * Change: New skybox for urban maps (ticket:3534, commit:aca180e0e860f42206bc9be21d9e7a65638afbec)
+   * Change: New cliff decals to make cliffs more visible (commit:4a53a0e010452a1ef2a64d92fd3f12c27b451a50)
+   * Fix: Work better with archaic OpenGL drivers, and add a workaround option to the menu (commit:f54eb00d7044827e011bd3261108bfd446f6a68e, commit:8b8282cc1f9bbddd6c48cef4dbf1681b84160129, commit:0c03151e250a89f23ea5960cd488367112bd3fdc, commit:96272ebf5008ad7ac47865e3493d43a597371944, commit:f5a7fd52c01dbe848ecaab27da4a08fc7eef536a, commit:7867b7abe209613da26ae36897ac864eaee73a14, commit:691df6a1837cec65fe7ac4e924c96868df2b749d)
+   * Fix: Placement of droid selection boxes and group/commander numbers (ticket:3547, commit:dd8025d10853fe775ef37c0c632647086752b4d9)
+ * Multiplayer:
+   * Change: Add oil barrels to map preview (commit:5b07a7b755a529d37c5f308b5ecd6df52da05fec)
+   * Fix: Sensibly handle multiple maps with the same name (ticket:3531, ticket:3180, commit:15c04ab10f87de89ca7dcae2813834bd1a03247b, commit:205609302755ec151d4768da6cdcefe768059fb1, commit:1461b3a5a81b72381bc3cc3dbc57bbd2f5ce22a7)
+   * Fix: Don't crash when a player fails to join a game (commit:bf2483cbd7430bd81457a6931c1e526828c7d18a, commit:7a0cd2eccfe733215ee43cab28243d7f29918b75)
+   * Fix: Don't freeze when a player leaves (ticket:3410, commit:53ce0a7c38822feda52bc9ba24fd45d02a0fa7cc, commit:e0939a02175e56f8a0f1468286f0cbd039053174)
+   * Fix: Don't desync when a player leaves (commit:35f301b1ba7f76be1bbfc80d8cdb924f12d6ae7e)
+   * Fix: More consistent ping display (commit:bedd8704f2aef5afd1c2acfa4566a0445d3b22fb)
+   * Fix: When a player freezes, don't block communication (e.g. chat) between the remaining ones (commit:e14c39fb38ba8c6f11bb4f8e3f0e78a61cb86828)
+   * Fix: Show all players when a player has left (ticket:3461, commit:00b1968184ff4f215ed7de8b217857f0d5866ad1)
+   * Fix: Play "Artifact recovered" sound only to the player who actually found it (ticket:3488, commit:acaf4620e0f14d50b0c1696e0236ef9e82ca8e6a)
+ * Multiplayer balance (commit:ea7b1912fdd6d733288e9b5e783af8cd1c3cf408):
+   * Nerf flamers, mostly by decreasing incendiary damage of flamers, to compensate the fact that it is unaffected by armor type modifiers. Also decrease incendiary radius to prevent ground flamers from causing incendiary damage to walls.
+     * Inferno: price 80->110, incendiary radius 64->48, incendiary damage 40->32
+     * Thermite Cyborg: incendiary damage 38->32
+     * Plasmite: price 80->130, incendiary radius 96->60, incendiary damage 63->50
+     * incendiary Mortar: price 150->200, pit price 135->170, incendiary damage 30->22
+     * incendiary Howitzer: price 250->300, emplacement price 325->400, incendiary damage 60->32
+     * Thermite Bombs: incendiary damage 200->120
+     * Plasmite Bombs: incendiary damage 200->140
+   * Nerf machineguns to compensate the ROF fix that used to decrease with game FPS.
+     * HMG: damage 18->17
+     * AG: fire pause 3->4, damage 20->19
+     * TAG: price 100->120, fire pause 3->4, damage 30->28
+     * AG Cyborg: fire pause 4->5, damage 20->18
+     * MG: ROF upgrades 15%/30%/45% -> 17%/34%/50%.
+     * Whirlwind: fire pause 3->4
+   * Slightly nerf rocket branch in comparison to cannons. Most importantly, nerf MRAs to compensate the fix in indirect fire mechanics.
+     * Minipod: range 1152->1088
+     * MRA: damage 34->29, splash damage 30->29, reload time 145->165
+     * MC: research points 4800->3600
+     * HPV: research points 7200->4800
+   * Make T3 missiles homing, making use of the new homing-indirect targeting class. Nerf Seraphs to compensate that fact.
+     * Seraph: damage 120->110, splash 100->90, targeting class INDIRECT->HOMING-INDIRECT
+     * Archangel: targeting class INDIRECT->HOMING-INDIRECT
+   * Make walls effective even after gates are invented.
+     * Gates: price 25->75
+   * Make cannon fortresses cheaper, while nerfing range, in order to make them usable in low oil matchups and less effective in high-oil settings.
+     * Cannon Fortress: price 1000->900, range 1792->1408
+ * Translations:
+   * Update: Polish (ticket:1347, commit:9fc92b7d64200c65f7ea8baab617ed8d19a773cf)
+   * Update: French (ticket:3483, ticket:3512, commit:badb8c05cb3e9e8a8e1af529288d57b96126e482, commit:113796a9d6a8e34ced9c93bae213ba53b19d5944)
+   * Update: Hungarian (ticket:3485, commit:d74ebad6a32dbe49771223c347ad9515a101976b)
+   * Update: Turkish (ticket:3486, commit:a400fe055fd5d176cd809bcfdc0973cf839a4a2c)
+   * Update: Dutch (ticket:3484, commit:c46d2d56ea3cbfe9d7ba7516f5b1962a2fef2d37)
+
+
+2012-05-13: Version 3.1 beta10
+ * General:
+   * Fix: Loading of skirmish games (ticket:3451, commit:18216c60e76d05ad0fe2bf7d860347f76f70c8f8)
+   * Fix: Scavengers in Fast Play are on their own team again (ticket:3447, commit:c3218e7ecce6eaca4f4f2620cf42cce61cc9ff5c)
+   * Fix: Allow building the designed unit in the tutorial (ticket:3058, commit:7079ad295112abcd83e6be1e7c172d36aec64c25)
+ * Multiplayer:
+   * Fix: Don't desync occasionally when some player slots are empty (commit:1ef4fc6cfdf05435bbaaa95155c23ea1a76d6409, commit:ef685d0b892327b6e8af90da0ade792575925e3d)
+   * Fix: Don't tell players who lost that they won (ticket:3449, commit:25e118c628881f20411d027ff2d48e8a63a44730)
+ * Graphics:
+   * Change: Updated texture for the urban building features (commit:4a9ac7fc3ed17ee9b63e829b10de3791c0ee7bd9)
+   * Fix: Team colour mask on Plasmite Flamer, Sunburst AA and AA Flak Cannon (ticket:3433, commit:e36cdf11e827e85c79cbd9319507809c1fae838b)
+ * Translations:
+   * Update: Hungarian (ticket:3458, ticket:3470, commit:0def25206b7d23788919a2aa067e880626e542fc, commit:9bed66e764a176b7b4b448df5e1f534e1991c450)
+   * Update: Spanish (ticket:3473, commit:baa143872208ba54bec2dc41213ca622209e4868)
+
+
+2012-05-04: Version 3.1_beta9
+ * General:
+   * Change: Save campaign and skirmish games separately (ticket:3377, commit:d8789661fbffe2f648a06a0689de3a9350bbe8b0)
+   * Change: Target selection improvements (commit:fb8efec5b0278468c445173f7d4e30e209f621c6, commit:430e55e5cd279c27bfee42736fb1a516be375114)
+   * Fix: Don't confuse different unit templates (ticket:3146, ticket:3369, commit:28c10b00a8f3bf6d87176e3aba8fba65993cedba, commit:0de0c416297a1694146af7ca82189ee971c93502, commit:3bebe1a0d6c3e8f230b56def4a823430a2a58c9f, commit:0ad220b334cabb17d356e0132fc07c36624455da)
+   * Fix: Don't confuse Super Transport with other templates (ticket:3426, commit:146332aaee331997dd668bf36635fa190ca7ba2b)
+   * Fix: Don't keep revealing terrain after units are destroyed (ticket:3339, ticket:3419, commit:21326496e1b4348ec96a96e268d138394aef183c)
+   * Fix: Don't randomly prevent units from firing (ticket:3267, commit:17d3ea3863fb4b68da6b4bff7a11726d746c1aad)
+   * Fix: Don't accelerate just before reaching the destination (ticket:3424, commit:fb49891c23d368f85b16904c35642b75f278784c)
+   * Fix: Allow shooting through open gates (commit:fcd5510a1311cfc535685aeac2983df13800729e)
+   * Fix: Display correct destroyed structure count at end of game (ticket:3380, ticket:3435, commit:fae22f7e2031eff681a5e94b6cb51546789ad1c1)
+ * Multiplayer:
+   * Fix: Don't desync after picking up oil barrels (ticket:3396, ticket:3413, commit:b6834d18cb7a42a60675379ca99ae241cb65374e)
+   * Fix: Don't desync or freeze when a player leaves (commit:2309f165b021e7ea0a4d9c8a2e85cdea6e8f10ba, commit:93f0e61d924d6709c8db68b53d19f7e3bbeaa911)
+   * Fix: Network performance improvements (commit:b9cc7702b7dc7ff3781f32f69b9cac110ebd6b98, commit:049982522b9e247a2c8a23c43e89fdc1af9a3ad6)
+   * Fix: Make debug build net usage stats meaningful (commit:5e3d4bcb388f36c86dd26b5f9783c7574c5a4901, commit:282efa8884a61d940b0414f0526b8abef78b62d0)
+   * Fix: Kicking of AIs (ticket:3439, commit:ca736e71af9e2444ae0133a19214f27db456e9a2)
+ * Campaign:
+   * Change: Disable the save option between campaign missions and the autosave, since the resulting savegames don't always work correctly (ticket:3377, commit:62da559ebe7fbb0ede9592b4b5d9382fecd9ef09)
+   * Fix: Don't slow the game down by spamming asserts (ticket:3403, commit:9775d0c4f66f80d6378cee0dc9ea31d3cdfe5708)
+ * Graphics:
+   * Fix: Scavenger MRAs (ticket:3365, commit:e50d51339eb55f6990b97ad4e28722b6a4eea23c)
+   * Fix: Add gate corners, and fix gate team colour (commit:00bbfea089fc881ac5ca31b50c463bddfcf4c141, commit:0964038ae0c39c6fcb73eb2f6ef3700d295080ce)
+ * Translations:
+   * Update: Turkish (ticket:3417, commit:3015548e6d161ebca885893471edeb26043ffb28)
+   * Update: French (ticket:3430, commit:17f7f71f9b4b629491212dbb32d0ec811fa488b9)
+
+2012-04-22: Version 3.1_beta8
+ * General:
+   * Change: Make screen shake not shake on walls, and the duration depend on what was destroyed (commit:33842677af6b6cb591c5a3a677849eb600e10e2f)
+   * Fix: Enable truck template when building factory before HQ (ticket:3337, commit:7291bb9b28e3d5835bf9cee6f5e407f4112cc8a9)
+   * Fix: Problem with continent generation making droids refuse orders (ticket:3269, commit:3bd70ae8b9be93bb19d4bc694b7197277bc412fe)
+   * Fix: Don't show repair icon for a selected repair droid itself (ticket:3242, commit:1fae45407f91a89e632a6534b4bebc10450c3e31)
+ * Multiplayer:
+   * Change: Update GreatRift, MizaMaze and Wheel to include scavengers and new walls, add missing cliff tiles (ticket:2857, ticket:3317, commit:0ad1b227ff63958b1af969f6e6b3d256f8607647)
+   * Fix: Avoid mixing up droid orders during lag (commit:83f7adecc9ec6d769f10ee4df2e7f8c75a84ecb8)
+   * Fix: Factories drop artifacts again (commit:29966c5da299f944a0e52ab579d2b3a7ed8d3063, commit:aaeaa4140a157341f68eb827ddbfaf1e90c4261b, commit:8e48e9e422b6a962374e9f822c2de1e95f196942)
+   * Fix: Disable unit design when HQ gets destroyed (ticket:3342, commit:466880e1cdbc5830210dc8eaaed5a2d0b7781d76)
+   * Fix: Make unit design/radar depend on the existence of an HQ, not the base setting (commit:d0fc1e580d7fc57a5c10efabc764085835f45e51)
+ * Lobby:
+   * Change: Distinguish between wrong version, wrong mod and full game (commit:dc6a4b3eb82d2c062273b9ecd504e7065e3badfd)
+   * Change: Subtract closed slots from the shown maximum player number (commit:0c5aebfdc1baf3d19d1524b829a23e802d6590a4)
+   * Fix: Properly handle a disappearing host (ticket:3313, commit:0de4f38295d2db0e1df9db11c6ccb598f5e84d2f)
+   * Fix: Always show lock icon when a password is set, don't show it in games without password (ticket:3357, commit:bd6c1d203b784a923e9331f67b2cee7226daab99)
+ * Translations:
+   * Update: Spanish (ticket:3361, commit:a018ecdbb200dc6f83fc45f326ab82b60a78bdb1)
+   * Update: Polish (ticket:1347, commit:c0d7331cdc30ac4ccca1703d8a746f3f366ea500, commit:a67868fed5e3035a7d182095b9d49374c2b4047d)
+   * Update: Hungarian (ticket:3412, commit:b9d6e17f93c5f651c1070c4d89eedaec094794a1, commit:188b4ac5a010e8ab2c1b86b4e77728b76067f713)
+   * Update: Brazilian (ticket:3415, commit:74bd1b13aed3a369e0c93796d56ee5f323593f27)
+   * Update: Turkish (ticket:3417, commit:13128367ad68725d310bc3372dfe624b3045a881)
+   * Update: German (ticket:3418, commit:641092f6cefdc3cadbc871a18dc2e08a3b979932)
+
+2012-03-19: Version 3.1_beta7
+ * General:
+   * Fix: Don't randomly crash when moving units (ticket:3301, commit:fbc600ecdf9246a34038f58063baa2b460f6c984)
+   * Fix: When unloading a transporter, put the units on the terrain and not above or below it (ticket:3169, commit:f54529ae0a62b76db6c2bc65a74e60bb021a09e8)
+   * Fix: Improve pathfinding (commit:c9a618cd821d02b47315c24f4fe0cacecbe04ecc)
+   * Fix: Save factory numbers to properly restore their order on loading (ticket:3244, commit:c041fb3dab50bb6a6348fd9340bf0d61902e3c4d)
+ * Multiplayer:
+   * Fix: Show research messages again in the intelligence screen (ticket:3085, commit:c8dd2f173bda1469dbd20921ba0fab940e73037c)
+   * Fix: Disable unit design without HQ (ticket:3305, commit:d5a97c039912b4b29b34f8df6bbd925f684aa835)
+ * Translations:
+   * Update: French (ticket:3311, commit:f1e38830fd6ab7242a0078db53c9c2dfcb72ff33)
+   * Update: Spanish (ticket:3335, commit:952f62a87bae585472556f315157b51098c68dcc)
+
+2012-03-13: Version 3.1_beta6
+ * General:
+   * Fix: Make VTOLs rearm on rearming pads, not beside them (ticket:3285, commit:b4ad988996732c0266be62a301b9fb0a66940ad1)
+   * Fix: Make building on a tile only accessible diagonally work (ticket:3215, commit:c831b5b87a6188432bee2cd2ea15c3413fdc2ec4)
+ * Multiplayer:
+   * Fix: Make it work again (ticket:3281, commit:b7d07f663b4781a32e56b97716266b6db0583d50)
+ * UI:
+   * Fix: Make setting the camera position by right-clicking the minimap work again (ticket:3283, commit:91614562b0969c47ffed7020caa1e16c8ede5823)
+ * Graphics:
+   * Fix: Make VTOL rearming pads stay above the ground (ticket:702, commit:071d08fc16dcca48ae070a6044686034670411f3)
+
 2012-03-13: Version 3.1_beta5
  * General:
    * Change: Adjust the burning time of destroyed oil derricks by the percentage they were completed (commit:f6ddbf1878ff2a387c4be95449d8a7835c18ebd8)

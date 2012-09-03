@@ -3,13 +3,6 @@
 /***********************************************************/
 
 directory	"images"
-file		IMGPAGE	"intfac0.png"
-file		IMGPAGE	"intfac1.png"
-file		IMGPAGE	"intfac2.png"
-file		IMGPAGE	"intfac3.png"
-file		IMGPAGE	"intfac4.png"
-file		IMGPAGE	"intfac5.png"
-// must load resources before IMG file
 file		IMG		"intfac.img"
 
 directory	"texpages"
@@ -42,3 +35,5 @@ file		TEXPAGE	"page-81-water-2.png"
 /* These are MP specific */
 file		TEXPAGE	"page-28-naval.png"
 file		TEXPAGE	"page-59-more-weapons.png"
+/* Added for Mysteryem's Sand Mod */
+file		TEXPAGE "page-109-sand-arizona.png"

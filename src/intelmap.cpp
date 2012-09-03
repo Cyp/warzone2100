@@ -1286,7 +1286,6 @@ void intDisplayPIEView(WIDGET *psWidget, UDWORD xOffset, UDWORD yOffset, WZ_DECL
 
 		OpenButtonRender((UWORD)(xOffset+Form->x), (UWORD)(yOffset+Form->y),
 			Form->width, Form->height);
-		//OpenButtonRender(Form->x, Form->y,Form->width, Form->height);
 
 		if (((VIEWDATA *)psMessage->pViewData)->type != VIEW_RES)
 		{
@@ -1500,6 +1499,7 @@ void displayImmediateMessage(MESSAGE *psMessage)
 	// remind the player that the message can be seen again from
 	// the intelligence screen
 	addConsoleMessage(_("New Intelligence Report"), CENTRE_JUSTIFY, SYSTEM_MESSAGE);
+	flashReticuleButton(IDRET_INTEL_MAP);
 }
 
 

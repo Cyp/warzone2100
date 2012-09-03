@@ -43,6 +43,8 @@
 
 #include "qtscriptfuncs.h"
 
+#define ATTACK_THROTTLE 100
+
 enum timerType
 {
 	TIMER_REPEAT, TIMER_ONESHOT_READY, TIMER_ONESHOT_DONE
@@ -90,14 +92,15 @@ static QList<QScriptEngine *> scripts;
 static QHash<QString, int> internalNamespace;
 
 // Call a function by name
-static bool callFunction(QScriptEngine *engine, const QString &function, const QScriptValueList &args)
+static bool callFunction(QScriptEngine *engine, const QString &function, const QScriptValueList &args, bool required = false)
 {
+	code_part level = required ? LOG_ERROR : LOG_WARNING;
 	QScriptValue value = engine->globalObject().property(function);
 	if (!value.isValid() || !value.isFunction())
 	{
 		// not necessarily an error, may just be a trigger that is not defined (ie not needed)
 		// or it could be a typo in the function name or ...
-		debug(LOG_WARNING, "function (%s) not defined?", function.toUtf8().constData());
+		debug(level, "called function (%s) not defined", function.toUtf8().constData());
 		return false;
 	}
 	int ticks = wzGetTicks();
@@ -117,6 +120,7 @@ static bool callFunction(QScriptEngine *engine, const QString &function, const Q
 		}
 		ASSERT(false, "Uncaught exception calling function \"%s\" at line %d: %s",
 		       function.toAscii().constData(), line, result.toString().toAscii().constData());
+		engine->clearExceptions();
 		return false;
 	}
 	return true;
@@ -225,7 +229,7 @@ void scriptRemoveObject(const BASE_OBJECT *psObj)
 		{
 			QScriptValueList args;
 			args += convMax(psObj, node.engine);
-			callFunction(node.engine, node.funcName, args);
+			callFunction(node.engine, node.funcName, args, true);
 		}
 		i = bindings.erase(i);
 	}
@@ -362,7 +366,7 @@ bool updateScripts()
 		{
 			args += convObj(IdToPointer(iter->baseobj, iter->player), iter->engine);
 		}
-		callFunction(iter->engine, iter->function, args);
+		callFunction(iter->engine, iter->function, args, true);
 	}
 	return true;
 }
@@ -686,12 +690,17 @@ bool triggerEventStructureReady(STRUCTURE *psStruct)
 //__ \subsection{eventAttacked(victim, attacker)}
 //__ An event that is run when an object belonging to the script's controlling player is
 //__ attacked. The attacker parameter may be either a structure or a droid.
-bool triggerEventAttacked(BASE_OBJECT *psVictim, BASE_OBJECT *psAttacker)
+bool triggerEventAttacked(BASE_OBJECT *psVictim, BASE_OBJECT *psAttacker, int lastHit)
 {
 	if (!psAttacker)
 	{
 		// do not fire off this event if there is no attacker -- nothing do respond to
 		// (FIXME -- consider this carefully)
+		return false;
+	}
+	// throttle the event for performance
+	if (gameTime - lastHit < ATTACK_THROTTLE)
+	{
 		return false;
 	}
 	for (int i = 0; i < scripts.size(); ++i)
@@ -747,6 +756,23 @@ bool triggerEventDestroyed(BASE_OBJECT *psVictim)
 			args += convMax(psVictim, engine);
 			callFunction(engine, "eventDestroyed", args);
 		}
+	}
+	return true;
+}
+
+//__ \subsection{eventPickup(feature, droid)}
+//__ An event that is run whenever a feature is picked up. It is called for
+//__ all players / scripts.
+//__ Careful passing the parameter object around, since it is about to vanish! (3.2+ only)
+bool triggerEventPickup(FEATURE *psFeat, DROID *psDroid)
+{
+	for (int i = 0; i < scripts.size(); ++i)
+	{
+		QScriptEngine *engine = scripts.at(i);
+		QScriptValueList args;
+		args += convFeature(psFeat, engine);
+		args += convDroid(psDroid, engine);
+		callFunction(engine, "eventPickup", args);
 	}
 	return true;
 }

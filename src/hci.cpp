@@ -84,10 +84,9 @@
 
 // Empty edit window
 //#define EDIT_OPTIONS
+bool SecondaryWindowUp = false;
 
 static UDWORD		newMapWidth, newMapHeight;
-
-static FLAG_POSITION debugMenuDroidDeliveryPoint;
 
 #define RETXOFFSET (0)// Reticule button offset
 #define RETYOFFSET (0)
@@ -768,8 +767,7 @@ static void intDoScreenRefresh(void)
 			case IOBJ_MANUFACTURE:	// The manufacture screen (factorys on bottom bar)
 			case IOBJ_RESEARCH:		// The research screen
 				//pass in the currently selected object
-				intUpdateObject((BASE_OBJECT *)interfaceStructList(),psObjSelected,
-					StatsWasUp);
+				intUpdateObject((BASE_OBJECT *)interfaceStructList(), psObjSelected, StatsWasUp);
 				break;
 
 			case IOBJ_BUILD:
@@ -777,8 +775,7 @@ static void intDoScreenRefresh(void)
 			case IOBJ_BUILDSEL:		// Selecting a position for a new structure
 			case IOBJ_DEMOLISHSEL:	// Selecting a structure to demolish
 				//pass in the currently selected object
-				intUpdateObject((BASE_OBJECT *)apsDroidLists[selectedPlayer],psObjSelected,
-					StatsWasUp);
+				intUpdateObject((BASE_OBJECT *)apsDroidLists[selectedPlayer], psObjSelected, StatsWasUp);
 				break;
 
 			default:
@@ -823,7 +820,7 @@ static void intDoScreenRefresh(void)
 			if (psFlag != NULL)
 			{
 				// need to restart the delivery point position
-				StartDeliveryPosition(psFlag);
+				startDeliveryPosition(psFlag);
 			}
 
 			// make sure the commander order screen is in the right state
@@ -1182,7 +1179,7 @@ void intResetScreen(bool NoAnim)
 	default:
 		break;
 	}
-
+	SecondaryWindowUp = false;
 	intMode = INT_NORMAL;
 	//clearSel() sets IntRefreshPending = true by calling intRefreshScreen() but if we're doing this then we won't need to refresh - hopefully!
 	IntRefreshPending = false;
@@ -1208,8 +1205,13 @@ static void intProcessOptions(UDWORD id)
 
 	if (id >= IDOPT_PLAYERSTART && id <= IDOPT_PLAYEREND)
 	{
+		int oldSelectedPlayer = selectedPlayer;
+
 		widgSetButtonState(psWScreen, IDOPT_PLAYERSTART + selectedPlayer, 0);
+		oldSelectedPlayer = selectedPlayer;
 		selectedPlayer = id - IDOPT_PLAYERSTART;
+		NetPlay.players[selectedPlayer].allocated = !NetPlay.players[selectedPlayer].allocated;
+		NetPlay.players[oldSelectedPlayer].allocated = !NetPlay.players[oldSelectedPlayer].allocated;
 		// Do not change realSelectedPlayer here, so game doesn't pause.
 		widgSetButtonState(psWScreen, IDOPT_PLAYERSTART + selectedPlayer, WBUT_LOCK);
 	}
@@ -1351,12 +1353,17 @@ static void intProcessEditStats(UDWORD id)
 		if (psPositionStats->ref >= REF_TEMPLATE_START &&
 		    psPositionStats->ref < REF_TEMPLATE_START + REF_RANGE)
 		{
+			FLAG_POSITION debugMenuDroidDeliveryPoint;
 			// Placing a droid from the debug menu, set up the flag. (This would probably be safe to do, even if we're placing something else.)
 			debugMenuDroidDeliveryPoint.factoryType = REPAIR_FLAG;
 			debugMenuDroidDeliveryPoint.factoryInc = 0;
-			deliveryPointToMove = &debugMenuDroidDeliveryPoint;
+			debugMenuDroidDeliveryPoint.player = selectedPlayer;
+			startDeliveryPosition(&debugMenuDroidDeliveryPoint);
 		}
-		intStartStructPosition(psPositionStats);
+		else
+		{
+			intStartStructPosition(psPositionStats);
+		}
 		editPosMode = IED_POS;
 	}
 	else if (id == IDSTAT_CLOSE)
@@ -1628,6 +1635,7 @@ INT_RETVAL intRunWidgets(void)
 	/* Extra code for the design screen to deal with the shadow bar graphs */
 	if (intMode == INT_DESIGN)
 	{
+		SecondaryWindowUp = true;
 		intRunDesign();
 	}
 
@@ -1862,7 +1870,6 @@ INT_RETVAL intRunWidgets(void)
 					if( ((STRUCTURE_STATS*)psPositionStats)->type == REF_RESOURCE_EXTRACTOR) {
 						if(fireOnLocation(structX,structY)) {
 							AddDerrickBurningMessage();
-							CanBuild = false;
 						}
 					}
 
@@ -1901,9 +1908,10 @@ INT_RETVAL intRunWidgets(void)
 			/* Directly positioning some type of object */
 			unsigned structX1 = INT32_MAX;
 			unsigned structY1 = INT32_MAX;
+			FLAG_POSITION flag;
 			structX2 = INT32_MAX - 1;
 			structY2 = INT32_MAX - 1;
-			if (found3DBuildLocTwo(&structX1, &structY1, &structX2, &structY2) || found3DBuilding(&structX1, &structY1))
+			if (sBuildDetails.psStats && (found3DBuilding(&structX1, &structY1) || found3DBuildLocTwo(&structX1, &structY1, &structX2, &structY2)))
 			{
 				if (structX2 == INT32_MAX - 1)
 				{
@@ -1919,6 +1927,12 @@ INT_RETVAL intRunWidgets(void)
 					std::swap(structY1, structY2);
 				}
 			}
+			else if (deliveryReposFinished(&flag))
+			{
+				structX2 = structX1 = map_coord(flag.coords.x);
+				structY2 = structY1 = map_coord(flag.coords.y);
+			}
+
 			for (unsigned j = structY1; j <= structY2; ++j)
 				for (unsigned i = structX1; i <= structX2; ++i)
 			{
@@ -1997,6 +2011,7 @@ INT_RETVAL intRunWidgets(void)
 					psDroid = buildDroid((DROID_TEMPLATE *)psPositionStats,
 								 world_coord(structX) + TILE_UNITS / 2, world_coord(structY) + TILE_UNITS / 2,
 								 selectedPlayer, false, NULL);
+					cancelDeliveryRepos();
 					if (psDroid)
 					{
 						addDroid(psDroid, apsDroidLists);
@@ -2316,7 +2331,6 @@ static void intProcessObject(UDWORD id)
 {
 	BASE_OBJECT		*psObj;
 	STRUCTURE		*psStruct;
-	bool IsDeliveryRepos = false;
 	SDWORD			butIndex;
 	UDWORD			statButID;
 
@@ -2442,10 +2456,7 @@ static void intProcessObject(UDWORD id)
 				    }
                 }
 
-				psObj = intGetObject(id);
-				if(!IsDeliveryRepos) {
-					intResetWindows(psObj);
-				}
+				intResetWindows(psObj);
 
 				// If a construction droid button was clicked then
 				// clear all other selections and select it.
@@ -2482,7 +2493,6 @@ static void intProcessObject(UDWORD id)
 			}
 			else if (psObj->type == OBJ_STRUCTURE)
 			{
-
 				if (StructIsFactory((STRUCTURE *)psObj))
 				{
 					//might need to cancel the hold on production
@@ -2493,6 +2503,12 @@ static void intProcessObject(UDWORD id)
 					//might need to cancel the hold on research facilty
 					releaseResearch((STRUCTURE *)psObj, ModeQueue);
 				}
+
+				for (STRUCTURE *psCurr = apsStructLists[selectedPlayer]; psCurr; psCurr = psCurr->psNext)
+				{
+					psCurr->selected = false;
+				}
+				psObj->selected = true;
 			}
 		}
 	}
@@ -2746,7 +2762,7 @@ static void intProcessStats(UDWORD id)
 			psFlag = FindFactoryDelivery(psStruct);
 			if (psFlag)
 			{
-				StartDeliveryPosition(psFlag);
+				startDeliveryPosition(psFlag);
 			}
 		}
 	}
@@ -2891,8 +2907,6 @@ void intCommanderSelected(DROID *psDroid)
 	intAddCommand(psDroid);
 	widgHide(psWScreen, IDOBJ_FORM);
 }
-
-extern void FinishStructurePosition(UDWORD xPos,UDWORD yPos,void *UserData);
 
 /* Start looking for a structure location */
 static void intStartStructPosition(BASE_STATS *psStats)
@@ -4246,11 +4260,6 @@ static bool intAddObjectWindow(BASE_OBJECT *psObjects, BASE_OBJECT *psSelected,b
 				return false;
 			}
 
-			if (psObj->selected)
-			{
-				widgSetButtonState(psWScreen, sBFormInit2.id, WBUT_CLICKLOCK);
-			}
-
 			if (psObj->type != OBJ_DROID || (((DROID *)psObj)->droidType == DROID_CONSTRUCT || ((DROID *)psObj)->droidType == DROID_CYBORG_CONSTRUCT))
 			{
 				// Set the colour for the production run size text.
@@ -4814,7 +4823,7 @@ static bool intAddStats(BASE_STATS **ppsStatsList, UDWORD numStats,
 			return false;
 		}
 	}
-
+	SecondaryWindowUp = true;
 	psStatsScreenOwner = psOwner;
 
 	ClearStatBuffers();
@@ -5899,7 +5908,7 @@ bool intAddProximityButton(PROXIMITY_DISPLAY *psProxDisp, UDWORD inc)
 		{							// go down the prox msgs and see if it's free.
 			for (psProxDisp2 = apsProxDisp[selectedPlayer]; psProxDisp2 && psProxDisp2->buttonID != cnt; psProxDisp2 = psProxDisp2->psNext) {}
 
-			if(psProxDisp == NULL)	// value was unused.
+			if(psProxDisp2 == NULL)	// value was unused.
 			{
 				sBFormInit.id = cnt;
 				break;
@@ -6405,7 +6414,7 @@ bool CoordInBuild(int x, int y)
 	pos.x = x - RET_X;
 	pos.y = y - RET_Y + buildmenu_height; // guesstimation
 
-	if (pos.x < 0 || pos.y < 0 || pos.x >= RET_FORMWIDTH || pos.y >= buildmenu_height)
+	if ((pos.x < 0 || pos.y < 0 || pos.x >= RET_FORMWIDTH || pos.y >= buildmenu_height) || !SecondaryWindowUp)
 	{
 		return false;
 	}

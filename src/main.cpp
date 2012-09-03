@@ -115,7 +115,7 @@ char * override_mods[MAX_MODS] = { NULL };
 char * override_mod_list = NULL;
 bool use_override_mods = false;
 
-char *current_map[3] = { NULL };
+char *current_map = NULL;
 
 char * loaded_mods[MAX_MODS] = { NULL };
 char * mod_list = NULL;
@@ -274,28 +274,8 @@ void setOverrideMods(char * modlist)
 
 void setCurrentMap(char* map, int maxPlayers)
 {
-	free(current_map[0]);
-	free(current_map[1]);
-	// Transform "Sk-Rush-T2" into "4c-Rush.wz" so it can be matched by the map loader
-	current_map[0] = (char*)malloc(strlen(map) + 1 + 7);
-	snprintf(current_map[0], 3, "%d", maxPlayers);
-	strcat(current_map[0], "c-");
-	if (strncmp(map, "Sk-", 3) == 0)
-	{
-		strcat(current_map[0], map + 3);
-	}
-	else
-	{
-		strcat(current_map[0], map);
-	}
-	if (strncmp(current_map[0] + strlen(current_map[0]) - 3, "-T", 2) == 0)
-	{
-		current_map[0][strlen(current_map[0]) - 3] = '\0';
-	}
-	current_map[1] = (char*)malloc(strlen(map) + 1 + 7);
-	strcpy(current_map[1], current_map[0]);
-	strcat(current_map[1],".wz");
-	current_map[2] = NULL;
+	free(current_map);
+	current_map = map != NULL? strdup(map) : NULL;
 }
 
 void clearOverrideMods(void)
@@ -581,6 +561,11 @@ static void check_Physfs(void)
 		debug(LOG_FATAL, "At least version 2 of PhysicsFS required!");
 		exit(-1);
 	}
+	if (linked.major == 2 && linked.minor == 0 && linked.patch == 2)
+	{
+		debug(LOG_ERROR, "You have PhysicsFS 2.0.2, which is buggy. You may experience random errors/crashes due to spuriously missing files.");
+		debug(LOG_ERROR, "Please upgrade/downgrade PhysicsFS to a different version, such as 2.0.3 or 2.0.1.");
+	}
 
     for (i = PHYSFS_supportedArchiveTypes(); *i != NULL; i++)
     {
@@ -779,7 +764,9 @@ static void startGameLoop(void)
 {
 	SetGameMode(GS_NORMAL);
 
-	if (!levLoadData(aLevelName, NULL, GTYPE_SCENARIO_START))
+	//if (!levLoadData(game.map /*aLevelName*/, &game.hash, NULL, GTYPE_SCENARIO_START))
+	// Not sure what aLevelName is, in relation to game.map. But need to use aLevelName here, to be able to start the right map for campaign, and need game.hash, to start the right non-campaign map, if there are multiple identically named maps.
+	if (!levLoadData(aLevelName, &game.hash, NULL, GTYPE_SCENARIO_START))
 	{
 		debug( LOG_FATAL, "Shutting down after failure" );
 		exit(EXIT_FAILURE);
@@ -1040,7 +1027,7 @@ bool getUTF8CmdLine(int* const utfargc, const char*** const utfargv) // explicit
 		LocalFree(wargv);
 		return false;
 	}
-	// the following malloc and UTF16toUTF8 will create leaks.
+	// the following malloc and UTF16toUTF8 will be cleaned up in realmain().
 	*utfargv = (const char**)malloc(sizeof(const char*) * wargc);
 	if (!*utfargv)
 	{
@@ -1118,6 +1105,8 @@ int realmain(int argc, char *argv[])
 	/*** Initialize directory structure ***/
 	make_dir(ScreenDumpPath, "screenshots", NULL);
 	make_dir(SaveGamePath, "savegames", NULL);
+	PHYSFS_mkdir("savegames/campaign");
+	PHYSFS_mkdir("savegames/skirmish");
 	make_dir(MultiCustomMapsPath, "maps", NULL); // MUST have this to prevent crashes when getting map
 	PHYSFS_mkdir("music");
 	PHYSFS_mkdir("logs");		// a place to hold our netplay, mingw crash reports & WZ logs
@@ -1141,6 +1130,9 @@ int realmain(int argc, char *argv[])
 		snprintf(buf, sizeof(buf), "%slogs%sWZlog-%02d%02d_%02d%02d%02d.txt", PHYSFS_getWriteDir(), PHYSFS_getDirSeparator(),
 			newtime->tm_mon + 1, newtime->tm_mday, newtime->tm_hour, newtime->tm_min, newtime->tm_sec );
 		debug_register_callback( debug_callback_file, debug_callback_file_init, debug_callback_file_exit, buf );
+
+		// FIXME: Change this to LOG_WZ on next release
+		debug(LOG_INFO, "Using %s debug file", buf);
 	}
 
 	// NOTE: it is now safe to use debug() calls to make sure output gets captured.
@@ -1163,8 +1155,6 @@ int realmain(int argc, char *argv[])
 	PhysicsEngineHandler engine;	// register abstract physfs filesystem
 
 	loadConfig();
-
-	NETinit(true);
 
 	// parse the command line
 	if (!ParseCommandLine(utfargc, utfargv))
@@ -1268,6 +1258,35 @@ int realmain(int argc, char *argv[])
 	war_SetWidth(pie_GetVideoBufferWidth());
 	war_SetHeight(pie_GetVideoBufferHeight());
 
+	// Fix up settings from the config file
+	// And initialize shader usage setting
+	if (!pie_GetShaderAvailability())
+	{
+		war_SetShaders(FALLBACK);
+		pie_SetShaderUsage(false);
+	}
+	else
+	{
+		if (war_GetShaders() == FALLBACK)
+		{
+			war_SetShaders(SHADERS_OFF);
+		}
+		if (!pie_GetFallbackAvailability())
+		{
+			war_SetShaders(SHADERS_ONLY);
+			pie_SetShaderUsage(true);
+		}
+		else if (war_GetShaders() == SHADERS_ONLY || war_GetShaders() == SHADERS_ON)
+		{
+			war_SetShaders(SHADERS_ON);
+			pie_SetShaderUsage(true);
+		}
+		else  // (war_GetShaders() == SHADERS_OFF)
+		{
+			pie_SetShaderUsage(false);
+		}
+	}
+
 	pie_SetFogStatus(false);
 	pie_ScreenFlip(CLEAR_BLACK);
 
@@ -1315,6 +1334,14 @@ int realmain(int argc, char *argv[])
 	wzMain3();
 	saveConfig();
 	systemShutdown();
+#ifdef WZ_OS_WIN	// clean up the memory allocated for the command line conversion
+	for (int i=0; i<argc; i++)
+	{
+		const char*** const utfargvF = &utfargv;
+		free((void *)(*utfargvF)[i]);
+	}
+	free(utfargv);
+#endif
 	wzShutdown();
 	debug(LOG_MAIN, "Completed shutting down Warzone 2100");
 	return EXIT_SUCCESS;

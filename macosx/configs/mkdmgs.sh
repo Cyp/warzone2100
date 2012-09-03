@@ -12,7 +12,6 @@ sequencelonme="sequences-lo.wz"
 sequencelomd5="ab2bbc28cef2a3f2ea3c186e18158acd"
 relbuild="${CONFIGURATION_BUILD_DIR}/"
 dmgout="build/dmgout"
-coident="${SRCROOT}/configs/codeident"
 
 # Fail if not release
 if [ ! "${CONFIGURATION}" = "Release" ]; then
@@ -22,24 +21,28 @@ fi
 
 # codesign setup
 signd () {
-	if [ -f "${coident}" ]; then
+	if [ ! -z "${CODE_SIGN_IDENTITY}" ]; then
 		# Local Config
-		local idetd=`cat ${coident}`
-		local resrul="${SRCROOT}/configs/codesignrules.plist"
+		local idetd="${CODE_SIGN_IDENTITY}"
+		local resrul="${SRCROOT}/configs/ResourceRules.plist"
 		local appth="/Volumes/Warzone 2100/Warzone.app"
 		
-		# Sign app
-		codesign -vfs "${idetd}" --keychain "CodeSign" --verify --resource-rules="${resrul}" "${appth}"
+		# Sign and verify the app
+		cp -a "${resrul}" "${appth}/"
+		/usr/bin/codesign -f -s "${idetd}" --resource-rules="${appth}/ResourceRules.plist" -vvv "${appth}"
+		rm "${appth}/ResourceRules.plist"
+		/usr/bin/codesign -vvv --verify "${appth}"
 		
-		# Sign the frameworks
+		# Sign and verify the frameworks
 		local framelst=`\ls -1 "${appth}/Contents/Frameworks" | sed -n 's:.framework$:&:p'`
 		for fsignd in ${framelst}; do
 			if [ -d "${appth}/Contents/Frameworks/${fsignd}/Versions/A" ]; then
-				codesign -vfs "${idetd}" --keychain "CodeSign" --verify "${appth}/Contents/Frameworks/${fsignd}/Versions/A"
+				/usr/bin/codesign -f -s "${idetd}" -vvv "${appth}/Contents/Frameworks/${fsignd}/Versions/A"
+				/usr/bin/codesign -vvv --verify "${appth}/Contents/Frameworks/${fsignd}/Versions/A"
 			fi
 		done
 	else
-		echo "warning: No codeident file found; code will not be signed."
+		echo "warning: No code signing identity configured; code will not be signed."
 	fi
 }
 
@@ -105,7 +108,7 @@ fi
 cd ../../
 echo "Copying the app cleanly."
 rm -r -f $dmgout/Warzone.app
-if ! tar -c --exclude '*.svg' --exclude 'Makefile*' --exclude 'makefile*' --exclude '.DS_Store' -C "${CONFIGURATION_BUILD_DIR}" Warzone.app | tar -xC $dmgout; then
+if ! tar -c --exclude '*.svg' --exclude 'Makefile*' --exclude 'makefile*' --exclude '.DS_Store' --exclude '.MD5SumLoc' -C "${CONFIGURATION_BUILD_DIR}" Warzone.app | tar -xC $dmgout; then
 	echo "error: Unable to copy the app" >&2
 	exit 1
 fi

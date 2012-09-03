@@ -1,10 +1,11 @@
 #!/bin/sh
 
+VerLib="1.5.12"
 OutDir="libpng"
-DirectorY="${OutDir}-1.5.9"
+DirectorY="${OutDir}-${VerLib}"
 FileName="${DirectorY}.tar.gz"
-SourceDLP="http://downloads.sourceforge.net/project/libpng/libpng15/1.5.9/${FileName}"
-MD5Sum="c740ba66cd7074ba2471b6a4ff48e1fb"
+SourceDLP="http://downloads.sourceforge.net/project/libpng/libpng15/${VerLib}/${FileName}"
+MD5Sum="8ea7f60347a306c5faf70b977fa80e28"
 
 configs/FetchSource.sh "${DirectorY}" "${OutDir}" "${FileName}" "${SourceDLP}" "${MD5Sum}"
 exit ${?}

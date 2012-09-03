@@ -163,7 +163,6 @@ bool recvBuildFinished(NETQUEUE queue)
 // Inform others that a structure has been destroyed
 bool SendDestroyStructure(STRUCTURE *s)
 {
-	technologyGiveAway(s);
 	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_DEBUG_REMOVE_STRUCTURE);
 
 	// Struct to destroy
@@ -237,6 +236,11 @@ bool recvLasSat(NETQUEUE queue)
 
 	psStruct = IdToStruct (id, player);
 	psObj	 = IdToPointer(targetid, targetplayer);
+	if (psStruct && !canGiveOrdersFor(queue.index, psStruct->player))
+	{
+		syncDebug("Wrong player.");
+		return !"Meow";  // Return value meaningless and ignored.
+	}
 
 	if (psStruct && psObj && psStruct->pStructureType->psWeapStat[0]->weaponSubClass == WSC_LAS_SAT)
 	{
@@ -304,7 +308,15 @@ void recvStructureInfo(NETQUEUE queue)
 			NETuint32_t(&templateId);
 			if (templateId != 0)
 			{
-				psTempl = IdToTemplate(templateId, player);
+				// For autogames, where we want the AI to take us over, our templates are not setup... so let's use any AI's templates.
+				if (!NetPlay.players[player].autoGame)
+				{
+					psTempl = IdToTemplate(templateId, player);
+				}
+				else
+				{
+					psTempl = IdToTemplate(templateId, ANYPLAYER);
+				}
 				if (psTempl == NULL)
 				{
 					debug(LOG_SYNC, "Synch error, don't have tempate id %u, so can't change production of factory %u!", templateId, structId);
@@ -320,6 +332,11 @@ void recvStructureInfo(NETQUEUE queue)
 	if (psStruct == NULL)
 	{
 		debug(LOG_SYNC, "Couldn't find structure %u to change production.", structId);
+		return;
+	}
+	if (!canGiveOrdersFor(queue.index, psStruct->player))
+	{
+		syncDebug("Wrong player.");
 		return;
 	}
 

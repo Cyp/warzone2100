@@ -35,8 +35,6 @@ extern bool sendGift			(uint8_t type, uint8_t to);
 extern bool recvGift                            (NETQUEUE queue);
 
 extern void technologyGiveAway				(const STRUCTURE* pS);
-extern void recvMultiPlayerRandomArtifacts      (NETQUEUE queue);
-extern void addMultiPlayerRandomArtifacts	(uint8_t quantity, FEATURE_TYPE type);
 extern void recvMultiPlayerFeature              (NETQUEUE queue);
 extern void sendMultiPlayerFeature(FEATURE_TYPE type, uint32_t x, uint32_t y, uint32_t id);
 
@@ -50,5 +48,6 @@ extern void giftRadar						(uint8_t from, uint8_t to, bool send);
 #define RESEARCH_GIFT	3
 #define POWER_GIFT		4
 #define STRUCTURE_GIFT	5	// Unused
+#define AUTOGAME_GIFT   6   // Notify others that we are now being controled by the AI
 
 #endif // __INCLUDED_SRC_MULTIGIFTS_H__

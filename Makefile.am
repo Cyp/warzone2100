@@ -44,6 +44,9 @@ EXTRA_DIST= \
 	pkg/dpkg \
 	macosx \
 	3rdparty/SDL/mac \
+	tools/image/image.cpp \
+	tools/image/configs \
+	tools/image/Image.xcodeproj \
 	po/custom/mac-infoplist.txt \
 	po/custom/warzone2100.desktop.txt
 
@@ -53,6 +56,7 @@ dist-hook:
 
 javascript-doc-base:
 	grep $(top_srcdir)/src/qtscript.cpp -e '//==' | sed 's/\/\/==//' > doc/globals.tex
+	grep $(top_srcdir)/src/qtscriptfuncs.cpp -e '//==' | sed 's/\/\/==//' >> doc/globals.tex
 	grep $(top_srcdir)/src/qtscript.cpp -e '//__' | sed 's/\/\/__//' > doc/events.tex
 	grep $(top_srcdir)/src/qtscript.cpp -e '//--' | sed 's/\/\/--//' > doc/functions.tex
 	grep $(top_srcdir)/src/qtscriptfuncs.cpp -e '//--' | sed 's/\/\/--//' >> doc/functions.tex

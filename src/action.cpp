@@ -177,42 +177,8 @@ static bool actionInAttackRange(DROID *psDroid, BASE_OBJECT *psObj, int weapon_s
 	ASSERT_OR_RETURN( false, compIndex < numWeaponStats, "Invalid range referenced for numWeaponStats, %d > %d", compIndex, numWeaponStats);
 	psStats = asWeaponStats + compIndex;
 
-	if (psDroid->order.type == DORDER_ATTACKTARGET
-		&& secondaryGetState(psDroid, DSO_HALTTYPE) == DSS_HALT_HOLD)
-	{
-		longRange = proj_GetLongRange(psStats);
-		rangeSq = longRange * longRange;
-	}
-	else
-	{
-		switch (psDroid->secondaryOrder & DSS_ARANGE_MASK)
-		{
-		case DSS_ARANGE_DEFAULT:
-			//if (psStats->shortHit > psStats->longHit)
-			if (weaponShortHit(psStats, psDroid->player) > weaponLongHit(psStats, psDroid->player))
-			{
-				rangeSq = psStats->shortRange * psStats->shortRange;
-			}
-			else
-			{
-				longRange = proj_GetLongRange(psStats);
-				rangeSq = longRange * longRange;
-			}
-			break;
-		case DSS_ARANGE_SHORT:
-			rangeSq = psStats->shortRange * psStats->shortRange;
-			break;
-		case DSS_ARANGE_LONG:
-			longRange = proj_GetLongRange(psStats);
-			rangeSq = longRange * longRange;
-			break;
-		default:
-			ASSERT(!"unknown attackrange order", "unknown attack range order");
-			longRange = proj_GetLongRange(psStats);
-			rangeSq = longRange * longRange;
-			break;
-		}
-	}
+	longRange = proj_GetLongRange(psStats);
+	rangeSq = longRange * longRange;
 
 	/* check max range */
 	if ( radSq <= rangeSq )
@@ -457,10 +423,10 @@ bool actionTargetTurret(BASE_OBJECT *psAttacker, BASE_OBJECT *psTarget, WEAPON *
 		dxy = iHypot(dx, dy);
 
 		targetPitch = iAtan2(dz, dxy);
+		targetPitch = (uint16_t)clip(angleDelta(targetPitch), pitchLowerLimit, pitchUpperLimit);  // Cast wrapping intended.
 		pitchError = angleDelta(targetPitch - tPitch);
 
 		tPitch += clip(pitchError, -pitchRate, pitchRate);  // Addition wrapping intended.
-		tPitch = (uint16_t)clip(angleDelta(tPitch), pitchLowerLimit, pitchUpperLimit);  // Cast wrapping intended.
 		onTarget = onTarget && targetPitch == tPitch;
 	}
 
@@ -1761,11 +1727,15 @@ void actionUpdateDroid(DROID *psDroid)
 			}
 
 			//ready to start building the structure
+			DroidStartBuild dsb;
 			if ( psDroid->action != DACTION_NONE &&
-				droidStartBuild(psDroid))
+				(dsb = droidStartBuild(psDroid)))
 			{
-				debug( LOG_NEVER, "DACTION_BUILD_FOUNDATION: start build");
-				psDroid->action = DACTION_BUILD;
+				if (dsb == DroidStartBuildSuccess)  // Not if waiting for oil to finish burning.
+				{
+					debug( LOG_NEVER, "DACTION_BUILD_FOUNDATION: start build");
+					psDroid->action = DACTION_BUILD;
+				}
 			}
 			else
 			{
@@ -1781,10 +1751,7 @@ void actionUpdateDroid(DROID *psDroid)
 		// WSS shouldn't get a free pass to hit anything on map
 		if (cbSensorDroid(psDroid) && asSensorStats[psDroid->asBits[COMP_SENSOR].nStat].type != SUPER_SENSOR)
 		{
-			// don't move to the target, just make sure it is visible
-			// Anyone commenting this out will get a knee capping from John.
-			// You have been warned!!
-			psDroid->psActionTarget[0]->visible[psDroid->player] = UBYTE_MAX;
+			// Don't move to the target.
 		}
 		else
 		{
@@ -1840,16 +1807,15 @@ void actionUpdateDroid(DROID *psDroid)
 		}
 		//can be either a droid or a structure now - AB 7/10/98
 		ASSERT_OR_RETURN(, (order->psObj->type == OBJ_DROID || order->psObj->type == OBJ_STRUCTURE)
-				   && (order->psObj->player == psDroid->player), "DACTION_FIRESUPPORT: incorrect target type" );
+				   && aiCheckAlliances(order->psObj->player, psDroid->player), "DACTION_FIRESUPPORT: incorrect target type" );
 
 			//don't move VTOL's
 			// also don't move closer to sensor towers
 			if (!isVtolDroid(psDroid) &&
 				(order->psObj->type != OBJ_STRUCTURE))
 			{
-				//move droids to within short range of the sensor now!!!!
 				Vector2i diff = removeZ(psDroid->pos - order->psObj->pos);
-				int rangeSq = asWeaponStats[psDroid->asWeaps[0].nStat].shortRange;
+				int rangeSq = asWeaponStats[psDroid->asWeaps[0].nStat].longRange / 2; // move close to sensor
 				rangeSq = rangeSq * rangeSq;
 				if (diff*diff < rangeSq)
 				{
@@ -1880,7 +1846,6 @@ void actionUpdateDroid(DROID *psDroid)
 					}
 				}
 			}
-		//}
 		break;
 	case DACTION_DESTRUCT:
 		if ((psDroid->actionStarted + ACTION_DESTRUCT_TIME) < gameTime)
@@ -1973,17 +1938,6 @@ void actionUpdateDroid(DROID *psDroid)
 		{
 			if (secondaryGetState(psDroid, DSO_HALTTYPE) != DSS_HALT_HOLD || order->type == DORDER_REPAIR)
 			{
-				/*once started - don't allow the Repair droid to follow the
-				damaged droid for too long*/
-				/*if (psDroid->actionPoints)
-				{
-					if (gameTime - psDroid->actionStarted > KEEP_TRYING_REPAIR)
-					{
-						addConsoleMessage("Repair Droid has given up!",DEFAULT_JUSTIFY);
-						psDroid->action = DACTION_NONE;
-						break;
-					}
-				}*/
 				// damaged droid has moved off - follow if we're not holding position!
 				psDroid->actionPos = psDroid->psActionTarget[0]->pos;
 				psDroid->action = DACTION_MOVETODROIDREPAIR;
@@ -2316,8 +2270,6 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		moveDroidTo(psDroid, psAction->x, psAction->y);
 		break;
 	case DACTION_REPAIR:
-		//ASSERT( order->type == DORDER_REPAIR,
-		//	"actionDroidBase: cannot start repair action without a repair order" );
 		psDroid->action = DACTION_MOVETOREPAIR;
 		psDroid->actionPos.x = psAction->x;
 		psDroid->actionPos.y = psAction->y;
@@ -2361,10 +2313,8 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		{
 			moveDroidTo(psDroid, order->psObj->pos.x, order->psObj->pos.y);		// movetotarget.
 		}
-
 		break;
 	case DACTION_SULK:
-// 		debug( LOG_NEVER, "Go with sulk ... %p", psDroid );
 		psDroid->action = DACTION_SULK;
 		// hmmm, hope this doesn't cause any problems!
 		psDroid->actionStarted = gameTime + MIN_SULK_TIME + (gameRand(MAX_SULK_TIME - MIN_SULK_TIME));
@@ -2402,8 +2352,6 @@ static void actionDroidBase(DROID *psDroid, DROID_ACTION_DATA *psAction)
 		ensureRearmPadClear((STRUCTURE *)psAction->psObj, psDroid);
 		break;
 	case DACTION_DROIDREPAIR:
-//		ASSERT( order->type == DORDER_DROIDREPAIR,
-//			"actionDroidBase: cannot start droid repair action without a repair order" );
 		psDroid->action = DACTION_MOVETODROIDREPAIR;
 		psDroid->actionPos.x = psAction->x;
 		psDroid->actionPos.y = psAction->y;

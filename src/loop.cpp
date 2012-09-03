@@ -160,6 +160,8 @@ static GAMECODE renderLoop()
 		if (!rotActive && getWidgetsStatus() && dragBox3D.status != DRAG_DRAGGING && wallDrag.status != DRAG_DRAGGING)
 		{
 			intRetVal = intRunWidgets();
+			// Send droid orders, if any. (Should do between intRunWidgets() calls, to avoid droid orders getting mixed up, in the case of multiple orders given while the game freezes due to net lag.)
+			sendQueuedDroidInfo();
 		}
 
 		//don't process the object lists if paused or about to quit to the front end
@@ -180,6 +182,7 @@ static GAMECODE renderLoop()
 
 			//handles callbacks for positioning of DP's
 			process3DBuilding();
+			processDeliveryRepos();
 
 			//ajl. get the incoming netgame messages and process them.
 			// FIXME Previous comment is deprecated. multiPlayerLoop does some other weird stuff, but not that anymore.
@@ -314,7 +317,7 @@ static GAMECODE renderLoop()
 			processInput();
 
 			//no key clicks or in Intelligence Screen
-			if (intRetVal == INT_NONE && !InGameOpUp && !isInGamePopupUp)
+			if (!isMouseOverRadar() && intRetVal == INT_NONE && !InGameOpUp && !isInGamePopupUp)
 			{
 				processMouseClickInput();
 			}
@@ -421,16 +424,20 @@ static GAMECODE renderLoop()
 
 static void gameStateUpdate()
 {
-	// Can't dump isHumanPlayer, since it causes spurious desynch dumps when players leave.
-	// TODO isHumanPlayer should probably be synchronised, since the game state seems to depend on it, so there might also be a risk of real desynchs when players leave.
-	//syncDebug("map = \"%s\", humanPlayers = %d %d %d %d %d %d %d %d", game.map, isHumanPlayer(0), isHumanPlayer(1), isHumanPlayer(2), isHumanPlayer(3), isHumanPlayer(4), isHumanPlayer(5), isHumanPlayer(6), isHumanPlayer(7));
-	syncDebug("map = \"%s\"", game.map);
+	syncDebug("map = \"%s\", pseudorandom 32-bit integer = 0x%08X, allocated = %d %d %d %d %d %d %d %d %d %d, position = %d %d %d %d %d %d %d %d %d %d", game.map, gameRandU32(),
+	          NetPlay.players[0].allocated, NetPlay.players[1].allocated, NetPlay.players[2].allocated, NetPlay.players[3].allocated, NetPlay.players[4].allocated, NetPlay.players[5].allocated, NetPlay.players[6].allocated, NetPlay.players[7].allocated, NetPlay.players[8].allocated, NetPlay.players[9].allocated,
+	          NetPlay.players[0].position, NetPlay.players[1].position, NetPlay.players[2].position, NetPlay.players[3].position, NetPlay.players[4].position, NetPlay.players[5].position, NetPlay.players[6].position, NetPlay.players[7].position, NetPlay.players[8].position, NetPlay.players[9].position
+	         );
+	for (unsigned n = 0; n < MAX_PLAYERS; ++n)
+	{
+		syncDebug("Player %d = \"%s\"", n, NetPlay.players[n].name);
+	}
 
 	// Actually send pending droid orders.
 	sendQueuedDroidInfo();
 
 	sendPlayerGameTime();
-	gameSRand(gameTime);   // Brute force way of synchronising the random number generator, which can't go out of synch.
+	NETflush();  // Make sure the game time tick message is really sent over the network.
 
 	if (!paused && !scriptPaused() && !editPaused())
 	{
@@ -650,7 +657,6 @@ GAMECODE gameLoop(void)
 	const Rational renderFraction(2, 5);  // Minimum fraction of time spent rendering.
 	const Rational updateFraction = Rational(1) - renderFraction;
 
-	bool didTick = false;
 	while (true)
 	{
 		// Receive NET_BLAH messages.
@@ -664,7 +670,6 @@ GAMECODE gameLoop(void)
 		{
 			break;  // Not doing a game state update.
 		}
-		didTick = true;
 
 		ASSERT(!paused && !gameUpdatePaused() && !editPaused(), "Nonsensical pause values.");
 
@@ -681,10 +686,10 @@ GAMECODE gameLoop(void)
 		ASSERT(deltaGraphicsTime == 0, "Shouldn't update graphics and game state at once.");
 	}
 
-	if (didTick || realTime - lastFlushTime < 400u)
+	if (realTime - lastFlushTime >= 400u)
 	{
 		lastFlushTime = realTime;
-		NETflush();  // Make sure the game time tick message is really sent over the network, and that we aren't waiting too long to send data.
+		NETflush();  // Make sure that we aren't waiting too long to send data.
 	}
 
 	unsigned before = wzGetTicks();

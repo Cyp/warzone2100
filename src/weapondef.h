@@ -26,12 +26,13 @@
 
 struct WEAPON
 {
-	unsigned int    nStat;		///< Index into the asWeaponStats global array
+	uint32_t        nStat;		///< Index into the asWeaponStats global array
 	uint32_t        ammo;
 	uint32_t        lastFired;	///< The gametime when this weapon last fired
 	uint32_t        shotsFired;
 	Rotation	rot;
 	Rotation	prevRot;
+	unsigned        usedAmmo;    ///< Amount of ammunition used up by a VTOL
 };
 
 // Defined in droid.cpp.

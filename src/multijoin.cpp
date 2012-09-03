@@ -227,7 +227,11 @@ static void resetMultiVisibility(UDWORD player)
 
 static void sendPlayerLeft(uint32_t playerIndex)
 {
-	NETbeginEncode(NETgameQueue(selectedPlayer), GAME_PLAYER_LEFT);
+	ASSERT(NetPlay.isHost, "Only host should call this.");
+
+	uint32_t forcedPlayerIndex = whosResponsible(playerIndex);
+	NETQUEUE (*netQueueType)(unsigned) = forcedPlayerIndex != selectedPlayer? NETgameQueueForced : NETgameQueue;
+	NETbeginEncode(netQueueType(forcedPlayerIndex), GAME_PLAYER_LEFT);
 		NETuint32_t(&playerIndex);
 	NETend();
 }
@@ -235,22 +239,31 @@ static void sendPlayerLeft(uint32_t playerIndex)
 void recvPlayerLeft(NETQUEUE queue)
 {
 	uint32_t playerIndex = 0;
-
 	NETbeginDecode(queue, GAME_PLAYER_LEFT);
 		NETuint32_t(&playerIndex);
 	NETend();
+	if (whosResponsible(playerIndex) != queue.index)
+	{
+		return;
+	}
 
 	turnOffMultiMsg(true);
 	clearPlayer(playerIndex, false);  // don't do it quietly
 	turnOffMultiMsg(false);
+	NetPlay.players[playerIndex].allocated = false;
+
+	char buf[256];
+	ssprintf(buf, _("%s has Left the Game"), getPlayerName(playerIndex));
+	addConsoleMessage(buf, DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
+	NETsetPlayerConnectionStatus(CONNECTIONSTATUS_PLAYER_DROPPED, playerIndex);
+
+	debug(LOG_INFO, "** player %u has dropped, in-game!", playerIndex);
 }
 
 // ////////////////////////////////////////////////////////////////////////////
 // A remote player has left the game
 bool MultiPlayerLeave(UDWORD playerIndex)
 {
-	char	buf[255];
-
 	if (playerIndex >= MAX_PLAYERS)
 	{
 		ASSERT(false, "Bad player number");
@@ -259,8 +272,6 @@ bool MultiPlayerLeave(UDWORD playerIndex)
 
 	NETlogEntry("Player leaving game", SYNC_FLAG, playerIndex);
 	debug(LOG_NET,"** Player %u [%s], has left the game at game time %u.", playerIndex, getPlayerName(playerIndex), gameTime);
-
-	ssprintf(buf, _("%s has Left the Game"), getPlayerName(playerIndex));
 
 	if (ingame.localJoiningInProgress)
 	{
@@ -271,8 +282,6 @@ bool MultiPlayerLeave(UDWORD playerIndex)
 		sendPlayerLeft(playerIndex);
 	}
 	game.skDiff[playerIndex] = 0;
-
-	addConsoleMessage(buf, DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
 
 	if (NetPlay.players[playerIndex].wzFile.isSending)
 	{

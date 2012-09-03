@@ -366,25 +366,36 @@ DROID_TEMPLATE *IdToTemplate(UDWORD tempId, UDWORD player)
 	DROID_TEMPLATE *psTempl = NULL;
 	UDWORD		i;
 
-	// First try static templates from scripts (could potentially also happen for currently human controlled players)
-	for (psTempl = apsStaticTemplates; psTempl && psTempl->multiPlayerID != tempId; psTempl = psTempl->psNext) ;
-	if (psTempl) return psTempl;
-
 	// Check if we know which player this is from, in that case, assume it is a player template
-	if (player != ANYPLAYER && player < MAX_PLAYERS)
+	// FIXME: nuke the ANYPLAYER hack
+	if (player != ANYPLAYER && player < MAX_PLAYERS )
 	{
-		for (psTempl = apsDroidTemplates[player]; psTempl && (psTempl->multiPlayerID != tempId); psTempl = psTempl->psNext) {}		// follow templates
+		for (psTempl = apsDroidTemplates[player]; psTempl && (psTempl->multiPlayerID != tempId); psTempl = psTempl->psNext)
+		{}		// follow templates
 
-		return psTempl;
+		if (psTempl)
+		{
+			return psTempl;
+		}
+		else
+		{
+			return NULL;
+		}
 	}
 
-	// We have no idea, so search through every player template
+	// It could be a AI template...or that of another player
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
-		for (psTempl = apsDroidTemplates[i]; psTempl && psTempl->multiPlayerID != tempId; psTempl = psTempl->psNext) ;
-		if (psTempl) return psTempl;
-	}
+		for (psTempl = apsDroidTemplates[i]; psTempl && psTempl->multiPlayerID != tempId; psTempl = psTempl->psNext)
+		{}	// follow templates
 
+		if (psTempl)
+		{
+			debug(LOG_NEVER, "Found template ID %d, for player %d, but found it in player's %d list?",tempId, player, i);
+			return psTempl;
+		}
+	}
+	// no error, since it is possible that we don't have this template defined yet.
 	return NULL;
 }
 
@@ -440,6 +451,15 @@ const char* getPlayerName(int player)
 		// make up a name for this player.
 		return getPlayerColourName(player);
 	}
+	else if (NetPlay.players[player].ai >= 0 && !NetPlay.players[player].allocated)
+	{
+		static char names[MAX_PLAYERS][StringSize];  // Must be static, since the getPlayerName() return value is used in tool tips... Long live the widget system.
+		// Add colour to player name.
+		sstrcpy(names[player], getPlayerColourName(player));
+		sstrcat(names[player], "-");
+		sstrcat(names[player], NetPlay.players[player].name);
+		return names[player];
+	}
 
 	return NetPlay.players[player].name;
 }
@@ -489,6 +509,12 @@ bool myResponsibility(int player)
 bool responsibleFor(int player, int playerinquestion)
 {
 	return whosResponsible(playerinquestion) == player;
+}
+
+bool canGiveOrdersFor(int player, int playerInQuestion)
+{
+	return playerInQuestion >= 0 && playerInQuestion < MAX_PLAYERS &&
+	       (player == playerInQuestion || responsibleFor(player, playerInQuestion) || getDebugMappingStatus());
 }
 
 int scavengerSlot()
@@ -709,9 +735,6 @@ bool recvMessage(void)
 				startMultiplayerGame();
 			}
 			break;
-		case GAME_ARTIFACTS:
-			recvMultiPlayerRandomArtifacts(queue);
-			break;
 		case GAME_ALLIANCE:
 			recvAlliance(queue, true);
 			break;
@@ -905,6 +928,21 @@ bool sendResearchStatus(STRUCTURE *psBuilding, uint32_t index, uint8_t player, b
 	return true;
 }
 
+STRUCTURE *findResearchingFacilityByResearchIndex(unsigned player, unsigned index)
+{
+	// Go through the structs to find the one doing this topic
+	for (STRUCTURE *psBuilding = apsStructLists[player]; psBuilding; psBuilding = psBuilding->psNext)
+	{
+		if (psBuilding->pStructureType->type == REF_RESEARCH
+		 && ((RESEARCH_FACILITY *)psBuilding->pFunctionality)->psSubject
+		 && ((RESEARCH_FACILITY *)psBuilding->pFunctionality)->psSubject->ref - REF_RESEARCH_START == index)
+		{
+			return psBuilding;
+		}
+	}
+	return NULL;  // Not found.
+}
+
 bool recvResearchStatus(NETQUEUE queue)
 {
 	STRUCTURE			*psBuilding;
@@ -929,6 +967,12 @@ bool recvResearchStatus(NETQUEUE queue)
 		debug(LOG_ERROR, "Bad GAME_RESEARCHSTATUS received, player is %d, index is %u", (int)player, index);
 		return false;
 	}
+	if (!canGiveOrdersFor(queue.index, player))
+	{
+		debug(LOG_WARNING, "Droid order for wrong player.");
+		syncDebug("Wrong player.");
+		return false;
+	}
 
 	int prevResearchState = 0;
 	if (aiCheckAlliances(selectedPlayer, player))
@@ -941,6 +985,8 @@ bool recvResearchStatus(NETQUEUE queue)
 	// psBuilding may be null if finishing
 	if (bStart)							// Starting research
 	{
+		ResetPendingResearchStatus(pPlayerRes);  // Reset pending state, even if research state is not changed due to the structure being destroyed.
+
 		psBuilding = IdToStruct(structRef, player);
 
 		// Set that facility to research
@@ -955,6 +1001,22 @@ bool recvResearchStatus(NETQUEUE queue)
 				cancelResearch(psBuilding, ModeImmediate);
 			}
 
+			if (IsResearchStarted(pPlayerRes))
+			{
+				STRUCTURE *psOtherBuilding = findResearchingFacilityByResearchIndex(player, index);
+				ASSERT(psOtherBuilding != NULL, "Something researched but no facility.");
+				if (psOtherBuilding != NULL)
+				{
+					cancelResearch(psOtherBuilding, ModeImmediate);
+				}
+			}
+
+			if (!researchAvailable(index, player, ModeImmediate) && bMultiPlayer)
+			{
+				debug(LOG_ERROR, "Player %d researching impossible topic \"%s\".", player, asResearch[index].pName);
+				return false;
+			}
+
 			// Set the subject up
 			pResearch				= &asResearch[index];
 			psResFacilty->psSubject = pResearch;
@@ -963,7 +1025,6 @@ bool recvResearchStatus(NETQUEUE queue)
 			MakeResearchStarted(pPlayerRes);
 			psResFacilty->timeStartHold		= 0;
 		}
-
 	}
 	// Finished/cancelled research
 	else
@@ -977,17 +1038,7 @@ bool recvResearchStatus(NETQUEUE queue)
 		// If they did not say what facility it was, look it up orselves
 		if (!structRef)
 		{
-			// Go through the structs to find the one doing this topic
-			for (psBuilding = apsStructLists[player]; psBuilding; psBuilding = psBuilding->psNext)
-			{
-				if (psBuilding->pStructureType->type == REF_RESEARCH
-				 && psBuilding->status == SS_BUILT
-				 && ((RESEARCH_FACILITY *) psBuilding->pFunctionality)->psSubject
-				 && ((RESEARCH_FACILITY *) psBuilding->pFunctionality)->psSubject->ref - REF_RESEARCH_START == index)
-				{
-					break;
-				}
-			}
+			psBuilding = findResearchingFacilityByResearchIndex(player, index);
 		}
 		else
 		{
@@ -1410,6 +1461,10 @@ bool recvTemplate(NETQUEUE queue)
 
 		NETtemplate(&t);
 	NETend();
+	if (!canGiveOrdersFor(queue.index, player))
+	{
+		return false;
+	}
 
 	t.prefab = false;
 	t.psNext = NULL;
@@ -1463,6 +1518,10 @@ static bool recvDestroyTemplate(NETQUEUE queue)
 		NETuint8_t(&player);
 		NETuint32_t(&templateID);
 	NETend();
+	if (!canGiveOrdersFor(queue.index, player))
+	{
+		return false;
+	}
 
 	ASSERT_OR_RETURN(false, player < MAX_PLAYERS, "invalid player size: %d", player);
 
@@ -1552,7 +1611,7 @@ bool recvDestroyFeature(NETQUEUE queue)
 // Network File packet processor.
 bool recvMapFileRequested(NETQUEUE queue)
 {
-	char mapStr[256],mapName[256],fixedname[256];
+	//char mapStr[256],mapName[256],fixedname[256];
 	uint32_t player;
 
 	PHYSFS_sint64 fileSize_64;
@@ -1575,31 +1634,12 @@ bool recvMapFileRequested(NETQUEUE queue)
 		NetPlay.players[player].wzFile.isCancelled = false;
 		NetPlay.players[player].wzFile.isSending = true;
 
-		memset(mapStr,0,256);
-		memset(mapName,0,256);
-		memset(fixedname,0,256);
+		LEVEL_DATASET *mapData = levFindDataSet(game.map, &game.hash);
 
 		addConsoleMessage("Map was requested: SENDING MAP!",DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
 
-		sstrcpy(mapName, game.map);
-		if (	strstr(mapName,"-T1") != 0
-			|| strstr(mapName,"-T2") != 0
-			|| strstr(mapName,"-T3") != 0)
-		{
-		// chop off the -T1 *only when needed!*
-		mapName[strlen(game.map)-3] = 0;		// chop off the -T1 etc..
-		}
-		// chop off the sk- if required.
-		if(strncmp(mapName,"Sk-",3) == 0)
-		{
-			sstrcpy(mapStr, &(mapName[3]));
-			sstrcpy(mapName, mapStr);
-		}
-
-		snprintf(mapStr, sizeof(mapStr), "%dc-%s.wz", game.maxPlayers, mapName);
-		snprintf(fixedname, sizeof(fixedname), "maps/%s", mapStr);		//We know maps are in /maps dir...now. fix for linux -Q
-		sstrcpy(mapStr, fixedname);
-		debug(LOG_NET, "Map was requested. Looking for %s", mapStr);
+		char *mapStr = mapData->realFileName;
+		debug(LOG_INFO, "Map was requested. Looking for %s", mapStr);
 
 		// Checking to see if file is available...
 		pFileHandle = PHYSFS_openRead(mapStr);
@@ -1613,17 +1653,17 @@ bool recvMapFileRequested(NETQUEUE queue)
 			NETbeginEncode(NETbroadcastQueue(), NET_HOST_DROPPED);
 			NETend();
 			abort();
-	}
+		}
 
 		// get the file's size.
 		fileSize_64 = PHYSFS_fileLength(pFileHandle);
-		debug(LOG_NET, "File is valid, sending [directory: %s] %s to client %u", PHYSFS_getRealDir(mapStr), mapStr, player);
+		debug(LOG_INFO, "File is valid, sending [directory: %s] %s to client %u", PHYSFS_getRealDir(mapStr), mapStr, player);
 
 		NetPlay.players[player].wzFile.pFileHandle = pFileHandle;
 		NetPlay.players[player].wzFile.fileSize_32 = (int32_t) fileSize_64;		//we don't support 64bit int nettypes.
 		NetPlay.players[player].wzFile.currPos = 0;
 
-		NETsendFile(mapStr, player);
+		NETsendFile(game.map, game.hash, player);
 	}
 	return true;
 }
@@ -1632,20 +1672,19 @@ bool recvMapFileRequested(NETQUEUE queue)
 void sendMap(void)
 {
 	int i = 0;
-	UBYTE done;
 
 	for (i = 0; i < MAX_PLAYERS; i++)
 	{
 		if (NetPlay.players[i].wzFile.isSending)
-	{
-			done = NETsendFile(game.map, i);
+		{
+			int done = NETsendFile(game.map, game.hash, i);
 			if (done == 100)
 			{
-		addConsoleMessage("MAP SENT!",DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
-				debug(LOG_NET, "=== File has been sent to player %d ===", i);
+				addConsoleMessage("MAP SENT!",DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
+				debug(LOG_INFO, "=== File has been sent to player %d ===", i);
 				NetPlay.players[i].wzFile.isSending = false;
 				NetPlay.players[i].needFile = false;
-	}
+			}
 		}
 	}
 }
@@ -1658,7 +1697,7 @@ bool recvMapFileData(NETQUEUE queue)
 	{
 		addConsoleMessage("MAP DOWNLOADED!",DEFAULT_JUSTIFY, SYSTEM_MESSAGE);
 		sendTextMessage("MAP DOWNLOADED",true);					//send
-		debug(LOG_NET, "=== File has been received. ===");
+		debug(LOG_INFO, "=== File has been received. ===");
 
 		// clear out the old level list.
 		levShutDown();
@@ -1668,6 +1707,7 @@ bool recvMapFileData(NETQUEUE queue)
 		{
 			return false;
 		}
+		loadMapPreview(false);
 		return true;
 	}
 

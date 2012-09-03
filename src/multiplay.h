@@ -28,6 +28,7 @@
 #include "group.h"
 #include "featuredef.h"
 #include "droid.h"  // For INITIAL_DROID_ORDERS.
+#include "levels.h"  // For LevelHashSize.
 
 // /////////////////////////////////////////////////////////////////////////////////////////////////
 // Game Options Structure. Enough info to completely describe the static stuff in a multiplayer game.
@@ -39,6 +40,7 @@ struct MULTIPLAYERGAME
 	char		map[128];					// name of multiplayer map being used.
 	uint8_t		maxPlayers;					// max players to allow
 	char		name[128];					// game name   (to be used)
+	Sha256          hash;                                           ///< Hash of map file. Zero if built in.
 	uint32_t    power;						// power level for arena game
 	uint8_t		base;						// clean/base/base&defence
 	uint8_t		alliance;					// no/yes/AIs vs Humans
@@ -94,14 +96,6 @@ extern UBYTE				bDisplayMultiJoiningStatus;	// draw load progress?
 // ////////////////////////////////////////////////////////////////////////////
 // defines
 
-// NOTE: MaxMsgSize is currently set to 16K.  When MAX_BYTESPERSEC has been reached (sent + recv!), then we do NOT
-//       do the sync code checks anymore(!), needless to say, this can and does cause issues.
-// FIXME: We should define this externally so people with dial-up modems can configure this
-// FIXME: Use possible compression on the packets.
-// NOTE: Remember, we (now) allow 450 units max * 7 (1 human, 6 AI possible for Host) to send to the other player.
-
-#define MAX_BYTESPERSEC			14336
-
 // Bitmask for client lobby
 
 #define NO_VTOLS  1
@@ -123,13 +117,9 @@ extern UBYTE				bDisplayMultiJoiningStatus;	// draw load progress?
 #define CAMP_BASE				1
 #define CAMP_WALLS				2
 
-#define DEATHMATCHTEMPLATES		4			// game templates are stored in player x.
-#define CAMPAIGNTEMPLATES		5
-
-//#define PING_LO                               0                       // this ping is kickin'.
 #define PING_MED				200			// this ping is crawlin'
 #define PING_HI					400			// this ping just plain sucks :P
-#define PING_LIMIT				1000		// if ping is bigger than this, then worry and panic.
+#define PING_LIMIT                              4000                    // If ping is bigger than this, then worry and panic, and don't even try showing the ping.
 
 #define LEV_LOW					400			// how many points to allocate for res levels???
 #define LEV_MED					700
@@ -153,6 +143,7 @@ extern bool isHumanPlayer(int player);				//to tell if the player is a computer 
 extern bool myResponsibility(int player);
 extern bool responsibleFor(int player, int playerinquestion);
 extern int whosResponsible(int player);
+bool canGiveOrdersFor(int player, int playerInQuestion);
 int scavengerSlot();    // Returns the player number that scavengers would have if they were enabled.
 int scavengerPlayer();  // Returns the player number that the scavengers have, or -1 if disabled.
 extern Vector3i cameraToHome		(UDWORD player,bool scroll);
@@ -195,7 +186,6 @@ extern bool sendDroidSecondary	(const DROID* psDroid, SECONDARY_ORDER sec, SECON
 bool sendDroidDisembark(DROID const *psTransporter, DROID const *psDroid);
 
 // Startup. mulitopt
-extern bool multiTemplateSetup	(void);
 extern bool multiShutdown		(void);
 extern bool sendLeavingMsg		(void);
 
@@ -235,5 +225,7 @@ extern bool msgStackFireTop(void);
 extern	bool multiplayPlayersReady	(bool bNotifyStatus);
 extern	void startMultiplayerGame	(void);
 extern	void resetReadyStatus		(bool bSendOptions);
+
+STRUCTURE *findResearchingFacilityByResearchIndex(unsigned player, unsigned index);
 
 #endif // __INCLUDED_SRC_MULTIPLAY_H__

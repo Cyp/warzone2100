@@ -95,17 +95,12 @@ bool loadConfig()
 	war_setMPcolour(ini.value("colourMP", -1).toInt());  // default is random (-1)
 	sstrcpy(game.name, ini.value("gameName", _("My Game")).toString().toUtf8().constData());
 	sstrcpy(sPlayer, ini.value("playerName", _("Player")).toString().toUtf8().constData());
-	if (ini.contains("mapName") && ini.contains("maxPlayers"))
-	{
-		sstrcpy(game.map, ini.value("mapName").toString().toUtf8().constData());
-		game.maxPlayers = ini.value("maxPlayers").toInt();	// FIXME: horrible kluge, MUST match map above
-	}
-	else
-	{
-		// Set a default map to prevent hosting games without a map.
-		sstrcpy(game.map, "Sk-Rush");
-		game.maxPlayers = 4;
-	}
+
+	// Set a default map to prevent hosting games without a map.
+	sstrcpy(game.map, "Sk-Rush");
+	game.hash.setZero();
+	game.maxPlayers = 4;
+
 	game.power = ini.value("power", LEV_MED).toInt();
 	game.base = ini.value("base", CAMP_BASE).toInt();
 	game.alliance = ini.value("alliance", NO_ALLIANCES).toInt();
@@ -121,12 +116,15 @@ bool loadConfig()
 	if (ini.contains("textureSize")) setTextureSize(ini.value("textureSize").toInt());
 	NetPlay.isUPNP = ini.value("UPnP", true).toBool();
 	if (ini.contains("FSAA")) war_setFSAA(ini.value("FSAA").toInt());
-	war_setFullscreen(ini.value("fullscreen", true).toBool());
+	if (ini.contains("shaders")) war_SetShaders(ini.value("shaders").toInt());
+	// Leave this to false, some system will fail and they can't see the system popup dialog!
+	war_setFullscreen(ini.value("fullscreen", false).toBool());
 	war_SetTrapCursor(ini.value("trapCursor", false).toBool());
+	// this should be enabled on all systems by default
 	war_SetVsync(ini.value("vsync", true).toBool());
-
-	int width = ini.value("width", 800).toInt();
-	int height = ini.value("height", 600).toInt();
+	// 640x480 is minimum that we will support
+	int width = ini.value("width", 640).toInt();
+	int height = ini.value("height", 480).toInt();
 	if (width < 640 || height < 480)	// sanity check
 	{
 		width = 640;
@@ -185,6 +183,7 @@ bool saveConfig()
 	ini.setValue("radarTerrainMode",(SDWORD)radarDrawMode);
 	ini.setValue("trapCursor", war_GetTrapCursor());
 	ini.setValue("vsync", war_GetVsync());
+	ini.setValue("shaders", war_GetShaders());
 	ini.setValue("textureSize", getTextureSize());
 	ini.setValue("FSAA", war_getFSAA());
 	ini.setValue("UPnP", (SDWORD)NetPlay.isUPNP);
@@ -206,6 +205,7 @@ bool saveConfig()
 				ini.setValue("gameName", game.name);			//  last hosted game
 			}
 			ini.setValue("mapName", game.map);				//  map name
+			ini.setValue("mapHash", game.hash.toString().c_str());          //  map hash
 			ini.setValue("maxPlayers", game.maxPlayers);		// maxPlayers
 			ini.setValue("power", game.power);				// power
 			ini.setValue("base", game.base);				// size of base
@@ -261,8 +261,12 @@ bool reloadMPConfig(void)
 				sstrcpy(game.name, ini.value("gameName").toString().toUtf8().constData());
 			}
 		}
-		ini.setValue("mapName", game.map);				//  map name
-		ini.setValue("maxPlayers", game.maxPlayers);		// maxPlayers
+
+		// Set a default map to prevent hosting games without a map.
+		sstrcpy(game.map, "Sk-Rush");
+		game.hash.setZero();
+		game.maxPlayers = 4;
+
 		ini.setValue("power", game.power);				// power
 		ini.setValue("base", game.base);				// size of base
 		ini.setValue("alliance", game.alliance);		// allow alliances
@@ -276,11 +280,12 @@ bool reloadMPConfig(void)
 	{
 		sstrcpy(game.name, ini.value("gameName").toString().toUtf8().constData());
 	}
-	if (ini.contains("mapName") && ini.contains("maxPlayers"))
-	{
-		sstrcpy(game.map, ini.value("mapName").toString().toUtf8().constData());
-		game.maxPlayers = ini.value("maxPlayers").toInt();	// FIXME: horrible kluge, MUST match map above
-	}
+
+	// Set a default map to prevent hosting games without a map.
+	sstrcpy(game.map, "Sk-Rush");
+	game.hash.setZero();
+	game.maxPlayers = 4;
+
 	game.power = ini.value("power", LEV_MED).toInt();
 	game.base = ini.value("base", CAMP_BASE).toInt();
 	game.alliance = ini.value("alliance", NO_ALLIANCES).toInt();
