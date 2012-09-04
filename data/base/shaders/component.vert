@@ -14,9 +14,9 @@ void main(void)
 	n = normalize(gl_NormalMatrix * gl_Normal);
 	t = normalize(gl_NormalMatrix * tangent.xyz);
 	b = normalize(cross(n, t) * tangent.w);
-	
+
 	positionView = gl_ModelViewMatrix * gl_Vertex;
-	
+
 	// Pass texture coordinates to fragment shader
 	gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
 
@@ -28,7 +28,7 @@ void main(void)
 	{
 		position.y -= stretch;
 	}
-	
+
 	// Translate every vertex according to the Model View and Projection Matrix
 	gl_Position = gl_ModelViewProjectionMatrix * position;
 

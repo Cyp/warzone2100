@@ -16,13 +16,13 @@ varying vec4 positionView; // position in view coordinates
 varying vec3 t,b,n; // mapping from local surface coordinates to view coordinates
 
 void main(void)
-{	
+{
 	vec4 mask, colour;
 	vec4 light = gl_FrontLightModelProduct.sceneColor + (gl_LightSource[0].ambient * gl_FrontMaterial.ambient);
 	vec3 N;
 	vec3 L = normalize(vec3(gl_LightSource[0].position)); // directional light
 	vec2 texCoord = gl_TexCoord[0].st;
-	
+
 	mat3 localSurface2View = mat3(t, b, n);
 	// tangent normal map implementation
 	if (normalmap == 1)
@@ -33,22 +33,22 @@ void main(void)
 	{
 		N = normalize(localSurface2View[2]);
 	}
-	
+
 	float lambertTerm = dot(N, L);
 	if (lambertTerm > 0.0)
 	{
 		vec4 matspecolor = gl_FrontMaterial.specular;
 		float shininess = gl_FrontMaterial.shininess;
-	
+
 		if (specularmap == 1)
 		{
 			//shininess = texture2D(Texture3, gl_TexCoord[0].st).a;
 			matspecolor = vec4(texture2D(Texture3, texCoord.st).rgb, 1.0);
 		}
-		
+
 		light += gl_LightSource[0].diffuse * gl_FrontMaterial.diffuse * lambertTerm;
 		vec3 E = normalize(vec3(-positionView));
-		vec3 R = reflect(-L, N);		
+		vec3 R = reflect(-L, N);
 		float specularterm = pow(max(dot(R, E), 0.0), shininess);
 		light += gl_LightSource[0].specular * matspecolor * specularterm;
 	}
@@ -60,7 +60,7 @@ void main(void)
 	{
 		// Get tcmask information from texture unit 1
 		mask = texture2D(Texture1, texCoord.st);
-	
+
 		// Apply color using grain merge with tcmask
 		gl_FragColor = (colour + (teamcolour - 0.5) * mask.a) * gl_Color;
 	}
@@ -79,7 +79,7 @@ void main(void)
 		// Calculate linear fog
 		float fogFactor = (gl_Fog.end - vertexDistance) / (gl_Fog.end - gl_Fog.start);
 		fogFactor = clamp(fogFactor, 0.0, 1.0);
-	
+
 		// Return fragment color
 		gl_FragColor = mix(gl_Fog.color, gl_FragColor, fogFactor);
 	}
