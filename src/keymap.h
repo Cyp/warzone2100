@@ -55,10 +55,9 @@ struct KEY_MAPPING
 KEY_MAPPING *keyAddMapping(KEY_STATUS status, KEY_CODE metaCode, KEY_CODE subcode, KEY_ACTION action, void (*pKeyMapFunc)(), const char *name);
 KEY_MAPPING *keyGetMappingFromFunction(void (*function)());
 KEY_MAPPING *keyFindMapping(KEY_CODE metaCode, KEY_CODE subCode);
-void keyProcessMappings(bool bExclude);
+void keyProcessMappings(Event const &event, bool bExclude);
 void keyInitMappings(bool bForceDefaults);
 KEY_CODE getLastSubKey();
-KEY_CODE getLastMetaKey();
 void processDebugMappings(unsigned player, bool val);
 bool getDebugMappingStatus();
 bool getWantedDebugMappingStatus(unsigned player);

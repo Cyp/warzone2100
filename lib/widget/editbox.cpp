@@ -297,7 +297,7 @@ void W_EDITBOX::run(W_CONTEXT *psContext)
 	/* If there is a mouse click outside of the edit box - stop editing */
 	int mx = psContext->mx;
 	int my = psContext->my;
-	if (mousePressed(MOUSE_LMB) && !geometry().contains(mx, my))
+	if (mouseDown(MOUSE_LMB) && !geometry().contains(mx, my))
 	{
 		StopTextInput();
 		screenPointer->setFocus(nullptr);

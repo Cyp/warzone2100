@@ -808,28 +808,29 @@ WidgetTriggers const &widgRunScreen(W_SCREEN *psScreen)
 	lastReleasedKey_DEPRECATED = WKEY_NONE;
 	if (getWidgetsStatus())
 	{
-		MousePresses const &clicks = inputGetClicks();
-		for (MousePresses::const_iterator c = clicks.begin(); c != clicks.end(); ++c)
+		for (auto &event : inputGetEvents())  // Spaghetti code, should call inputGetEvents() once, and pass the Events down everywhere needed.
 		{
 			WIDGET_KEY wkey;
-			switch (c->key)
+			switch (event.button)
 			{
 			case MOUSE_LMB: wkey = WKEY_PRIMARY; break;
 			case MOUSE_RMB: wkey = WKEY_SECONDARY; break;
 			default: continue;  // Who cares about other mouse buttons?
 			}
-			bool pressed;
-			switch (c->action)
+			sContext.mx = event.pos.x;
+			sContext.my = event.pos.y;
+			switch (event.action)
 			{
-			case MousePress::Press: pressed = true; break;
-			case MousePress::Release: pressed = false; break;
-			default: continue;
+				case Event::MousePress:
+				case Event::MouseDoubleClick:
+					psScreen->psForm->processClickRecursive(&sContext, wkey, true);
+					break;
+				case Event::MouseRelease:
+					lastReleasedKey_DEPRECATED = wkey;
+					psScreen->psForm->processClickRecursive(&sContext, wkey, false);
+					break;
+				default: break;
 			}
-			sContext.mx = c->pos.x;
-			sContext.my = c->pos.y;
-			psScreen->psForm->processClickRecursive(&sContext, wkey, pressed);
-
-			lastReleasedKey_DEPRECATED = wkey;
 		}
 	}
 

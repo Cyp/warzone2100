@@ -500,22 +500,18 @@ void	setConsolePermanence(bool state, bool bClearOld)
 }
 
 /** Check if mouse is over the Active console 'window' area */
-bool mouseOverConsoleBox()
+bool mouseOverConsoleBox(Event const &event)
 {
 	int gotMessages = getNumberConsoleMessages();
-	if (gotMessages &&
-		((UDWORD)mouseX() > mainConsole.topX)
-		&& ((UDWORD)mouseY() > mainConsole.topY)
-		&& ((UDWORD)mouseX() < mainConsole.topX + mainConsole.width)
-		&& ((UDWORD)mouseY() < (mainConsole.topY + 4 + linePitch * gotMessages)))
-	{
-		return true;
-	}
-	return false;
+	return event.type() == Event::Mouse && gotMessages &&
+		event.pos.x > int(mainConsole.topX) &&
+		event.pos.y > int(mainConsole.topY) &&
+		event.pos.x < int(mainConsole.topX + mainConsole.width) &&
+		event.pos.y < int(mainConsole.topY + 4 + linePitch * gotMessages);
 }
 
 /** Check if mouse is over the History console 'window' area */
-bool	mouseOverHistoryConsoleBox()
+bool mouseOverHistoryConsoleBox(Event const &event)
 {
 	int nudgeright = 0;
 	if (isSecondaryWindowUp())
@@ -535,34 +531,25 @@ bool	mouseOverHistoryConsoleBox()
 	}
 #endif
 	// check to see if mouse is in the area when console is enabled
-	if	(bConsoleDropped &&
-	     ((UDWORD)mouseX() > historyConsole.topX + nudgeright)
-	     && ((UDWORD)mouseY() > historyConsole.topY)
-	     && ((UDWORD)mouseX() < historyConsole.topX + historyConsole.width)
-	     && ((UDWORD)mouseY() < (historyConsole.topY + 4 + linePitch * NumDisplayLines)))
+	if (event.type() == Event::Mouse && bConsoleDropped &&
+	     event.pos.x > int(historyConsole.topX + nudgeright) &&
+	     event.pos.y > int(historyConsole.topY) &&
+	     event.pos.x < int(historyConsole.topX + historyConsole.width) &&
+	     event.pos.y < int(historyConsole.topY + 4 + linePitch * NumDisplayLines))
 	{
-		if (mousePressed(MOUSE_WUP))
+		if (event.mousePressed(MOUSE_WUP))
 		{
 			updatepos--;
 		}
-		else if (mousePressed(MOUSE_WDN))
+		else if (event.mousePressed(MOUSE_WDN))
 		{
 			updatepos++;
 		}
-		if (keyDown(KEY_LCTRL))
-		{
-			showBackgroundColor = true;
-		}
-		else
-		{
-			showBackgroundColor = false;
-		}
-		return (true);
+		// Not sure this is the right place for this. Not sure what it was originally intended to do, but makes a background sometimes appear when pressing Ctrl.
+		showBackgroundColor = bool(event.flags & Event::Ctrl);
+		return true;
 	}
-	else
-	{
-		return (false);
-	}
+	return false;
 }
 
 /** Sets up how many lines are allowed and how many are visible */

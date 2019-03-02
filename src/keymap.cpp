@@ -42,7 +42,6 @@
 #include "keyedit.h"
 
 static UDWORD asciiKeyCodeToTable(KEY_CODE code);
-static KEY_CODE getQwertyKey();
 
 // ----------------------------------------------------------------------------------
 KEY_MAPPING *keyGetMappingFromFunction(void (*function)())
@@ -74,7 +73,7 @@ static bool bWantDebugMappings[MAX_PLAYERS] = {false};
 std::list<KEY_MAPPING> keyMappings;
 
 /* Last meta and sub key that were recorded */
-static KEY_CODE	lastMetaKey, lastSubKey;
+static KEY_CODE lastSubKey;
 
 // ----------------------------------------------------------------------------------
 // Adding a mapped function ? add a save pointer! Thank AlexL.
@@ -537,45 +536,35 @@ static bool keyRemoveMappingPt(KEY_MAPPING *psToRemove)
 
 // ----------------------------------------------------------------------------------
 /* Allows _new_ mappings to be made at runtime */
-static bool checkQwertyKeys()
+static void checkQwertyKeys(Event const &event)
 {
-	KEY_CODE qKey;
-	UDWORD tableEntry;
-	bool aquired = false;
-
 	/* Are we trying to make a new map marker? */
-	if (keyDown(KEY_LALT))
+	/* Did we press a key */
+	if (event.action == Event::KeyPress && (event.flags & Event::Alt) && (event.key >= KEY_A && event.key <= KEY_Z))
 	{
-		/* Did we press a key */
-		qKey = getQwertyKey();
-		if (qKey)
+		unsigned tableEntry = asciiKeyCodeToTable(event.key);
+		/* We're assigning something to the key */
+		debug(LOG_NEVER, "Assigning keymapping to tableEntry: %i", tableEntry);
+		if (qwertyKeyMappings[tableEntry].psMapping)
 		{
-			tableEntry = asciiKeyCodeToTable(qKey);
-			/* We're assigning something to the key */
-			debug(LOG_NEVER, "Assigning keymapping to tableEntry: %i", tableEntry);
-			if (qwertyKeyMappings[tableEntry].psMapping)
-			{
-				/* Get rid of the old mapping on this key if there was one */
-				keyRemoveMappingPt(qwertyKeyMappings[tableEntry].psMapping);
-			}
-			/* Now add the new one for this location */
-			qwertyKeyMappings[tableEntry].psMapping =
-			    keyAddMapping(KEYMAP_ALWAYS, KEY_LSHIFT, qKey, KEYMAP_PRESSED, kf_JumpToMapMarker, "Jump to new map marker");
-			aquired = true;
-
-			/* Store away the position and view angle */
-			qwertyKeyMappings[tableEntry].xPos = player.p.x;
-			qwertyKeyMappings[tableEntry].yPos = player.p.z;
-			qwertyKeyMappings[tableEntry].spin = player.r.y;
+			/* Get rid of the old mapping on this key if there was one */
+			keyRemoveMappingPt(qwertyKeyMappings[tableEntry].psMapping);
 		}
+		/* Now add the new one for this location */
+		qwertyKeyMappings[tableEntry].psMapping =
+			keyAddMapping(KEYMAP_ALWAYS, KEY_LSHIFT, event.key, KEYMAP_PRESSED, kf_JumpToMapMarker, "Jump to new map marker");
+
+		/* Store away the position and view angle */
+		qwertyKeyMappings[tableEntry].xPos = player.p.x;
+		qwertyKeyMappings[tableEntry].yPos = player.p.z;
+		qwertyKeyMappings[tableEntry].spin = player.r.y;
 	}
-	return aquired;
 }
 
 
 // ----------------------------------------------------------------------------------
 /* Manages update of all the active function mappings */
-void	keyProcessMappings(bool bExclude)
+void keyProcessMappings(Event const &event, bool bExclude)
 {
 	/* Bomb out if there are none */
 	if (keyMappings.empty())
@@ -584,12 +573,7 @@ void	keyProcessMappings(bool bExclude)
 	}
 
 	/* Jump out if we've got a new mapping */
-	(void) checkQwertyKeys();
-
-	/* Check for the meta keys */
-	bool bMetaKeyDown = keyDown(KEY_LCTRL) || keyDown(KEY_RCTRL) || keyDown(KEY_LALT)
-	    || keyDown(KEY_RALT) || keyDown(KEY_LSHIFT) || keyDown(KEY_RSHIFT)
-	    || keyDown(KEY_LMETA) || keyDown(KEY_RMETA);
+	checkQwertyKeys(event);
 
 	/* Run through all our mappings */
 	for (auto keyToProcess = keyMappings.begin(); keyToProcess != keyMappings.end(); ++keyToProcess)
@@ -610,14 +594,29 @@ void	keyProcessMappings(bool bExclude)
 			continue;
 		}
 
-		if (keyToProcess->metaKeyCode == KEY_IGNORE && !bMetaKeyDown &&
-		    !(keyToProcess->status == KEYMAP__DEBUG && !getDebugMappingStatus()))
+		if (keyToProcess->status == KEYMAP__DEBUG && !getDebugMappingStatus())
+		{
+			continue;
+		}
+
+		unsigned mask = 0;
+		switch (keyToProcess->metaKeyCode)
+		{
+			default:
+			case KEY_IGNORE: break;
+			case KEY_LCTRL: case KEY_RCTRL: mask |= Event::Ctrl; break;
+			case KEY_LALT: case KEY_RALT: mask |= Event::Alt; break;
+			case KEY_LSHIFT: case KEY_RSHIFT: mask |= Event::Shift; break;
+			case KEY_LMETA: case KEY_RMETA: mask |= Event::Meta; break;
+		}
+
+		if ((event.flags & mask) || (!event.flags && !mask))
 		{
 			switch (keyToProcess->action)
 			{
 			case KEYMAP_PRESSED:
 				/* Were the right keys pressed? */
-				if (keyPressed(keyToProcess->subKeyCode))
+				if (event.keyPressed(keyToProcess->subKeyCode))
 				{
 					lastSubKey = keyToProcess->subKeyCode;
 					/* Jump to the associated function call */
@@ -626,7 +625,7 @@ void	keyProcessMappings(bool bExclude)
 				break;
 			case KEYMAP_DOWN:
 				/* Is the key Down? */
-				if (keyDown(keyToProcess->subKeyCode))
+				if (event.action == Event::FrameNew && keyDown(keyToProcess->subKeyCode))
 				{
 					lastSubKey = keyToProcess->subKeyCode;
 					/* Jump to the associated function call */
@@ -636,7 +635,7 @@ void	keyProcessMappings(bool bExclude)
 				break;
 			case KEYMAP_RELEASED:
 				/* Has the key been released? */
-				if (keyReleased(keyToProcess->subKeyCode))
+				if (event.keyReleased(keyToProcess->subKeyCode))
 				{
 					lastSubKey = keyToProcess->subKeyCode;
 					/* Jump to the associated function call */
@@ -650,88 +649,19 @@ void	keyProcessMappings(bool bExclude)
 				break;
 			}
 		}
-		/* Process the combi ones */
-		if ((keyToProcess->metaKeyCode != KEY_IGNORE && bMetaKeyDown) &&
-		    !(keyToProcess->status == KEYMAP__DEBUG && !getDebugMappingStatus()))
+
+		/* Script callback - find out what meta key was pressed */
+		int pressedMetaKey =
+			event.flags & Event::Ctrl? KEY_LCTRL :
+			event.flags & Event::Alt? KEY_LALT :
+			event.flags & Event::Shift? KEY_LSHIFT :
+			event.flags & Event::Meta? KEY_LMETA : KEY_IGNORE;
+
+		/* Find out what keys were pressed */
+		if (event.action == Event::KeyPress && !event.keySpecial())
 		{
-			/* It's a combo keypress - one held down and the other pressed */
-			if (keyDown(keyToProcess->metaKeyCode) && keyPressed(keyToProcess->subKeyCode))
-			{
-				lastMetaKey = keyToProcess->metaKeyCode;
-				lastSubKey = keyToProcess->subKeyCode;
-				keyToProcess->function();
-			}
-			else if (keyToProcess->altMetaKeyCode != KEY_IGNORE)
-			{
-				if (keyDown(keyToProcess->altMetaKeyCode) && keyPressed(keyToProcess->subKeyCode))
-				{
-					lastMetaKey = keyToProcess->metaKeyCode;
-					lastSubKey = keyToProcess->subKeyCode;
-					keyToProcess->function();
-				}
-			}
-		}
-	}
-
-	/* Script callback - find out what meta key was pressed */
-	int pressedMetaKey = KEY_IGNORE;
-
-	/* getLastMetaKey() can't be used here, have to do manually */
-	if (keyDown(KEY_LCTRL))
-	{
-		pressedMetaKey = KEY_LCTRL;
-	}
-	else if (keyDown(KEY_RCTRL))
-	{
-		pressedMetaKey = KEY_RCTRL;
-	}
-	else if (keyDown(KEY_LALT))
-	{
-		pressedMetaKey = KEY_LALT;
-	}
-	else if (keyDown(KEY_RALT))
-	{
-		pressedMetaKey = KEY_RALT;
-	}
-	else if (keyDown(KEY_LSHIFT))
-	{
-		pressedMetaKey = KEY_LSHIFT;
-	}
-	else if (keyDown(KEY_RSHIFT))
-	{
-		pressedMetaKey = KEY_RSHIFT;
-	}
-	else if (keyDown(KEY_LMETA))
-	{
-		pressedMetaKey = KEY_LMETA;
-	}
-	else if (keyDown(KEY_RMETA))
-	{
-		pressedMetaKey = KEY_RMETA;
-	}
-
-	/* Find out what keys were pressed */
-	for (int i = 0; i < KEY_MAXSCAN; i++)
-	{
-		/* Skip meta keys */
-		switch (i)
-		{
-		case KEY_LCTRL:
-		case KEY_RCTRL:
-		case KEY_LALT:
-		case KEY_RALT:
-		case KEY_LSHIFT:
-		case KEY_RSHIFT:
-		case KEY_LMETA:
-		case KEY_RMETA:
-			continue;
-			break;
-		}
-
-		/* Let scripts process this key if it's pressed */
-		if (keyPressed((KEY_CODE)i))
-		{
-			triggerEventKeyPressed(pressedMetaKey, i);
+			/* Let scripts process this key if it's pressed */
+			triggerEventKeyPressed(pressedMetaKey, event.key);
 		}
 	}
 }
@@ -779,13 +709,6 @@ KEY_CODE getLastSubKey()
 	return lastSubKey;
 }
 
-// ----------------------------------------------------------------------------------
-/* Returns the key code of the last meta key pressed - allows called functions to have a simple stack */
-KEY_CODE getLastMetaKey()
-{
-	return lastMetaKey;
-}
-
 
 static const KEY_CODE qwertyCodes[26] =
 {
@@ -799,20 +722,6 @@ static const KEY_CODE qwertyCodes[26] =
 	          KEY_Z,  KEY_X,  KEY_C,  KEY_V,  KEY_B,  KEY_N,  KEY_M
 	//        +---+   +---+   +---+   +---+   +---+   +---+   +---+
 };
-
-/* Returns the key code of the first ascii key that its finds has been PRESSED */
-static KEY_CODE getQwertyKey()
-{
-	for (KEY_CODE code : qwertyCodes)
-	{
-		if (keyPressed(code))
-		{
-			return code;  // Top-, middle- or bottom-row key pressed.
-		}
-	}
-
-	return (KEY_CODE)0;                     // no ascii key pressed
-}
 
 // ----------------------------------------------------------------------------------
 /*	Returns the number (0 to 26) of a key on the keyboard
@@ -829,7 +738,7 @@ UDWORD asciiKeyCodeToTable(KEY_CODE code)
 		}
 	}
 
-	ASSERT(false, "only pass nonzero key codes from getQwertyKey to this function");
+	ASSERT(false, "only pass nonzero key codes from KEY_A to KEY_Z to this function");
 	return 0;
 }
 

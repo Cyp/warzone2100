@@ -4876,23 +4876,15 @@ BASE_OBJECT *getCurrentSelected()
 }
 
 // Checks if a coordinate is over the build menu
-bool CoordInBuild(int x, int y)
+bool coordInBuild(Vector2i pos)
 {
 	// This measurement is valid for the menu, so the buildmenu_height
 	// value is used to "nudge" it all upwards from the command menu.
 	// FIXME: hardcoded value (?)
 	const int buildmenu_height = 300;
-	Vector2f pos;
+	pos -= Vector2i(RET_X, RET_Y - buildmenu_height);  // guesstimation
 
-	pos.x = x - RET_X;
-	pos.y = y - RET_Y + buildmenu_height; // guesstimation
-
-	if ((pos.x < 0 || pos.y < 0 || pos.x >= RET_FORMWIDTH || pos.y >= buildmenu_height) || !SecondaryWindowUp)
-	{
-		return false;
-	}
-
-	return true;
+	return pos.x >= 0 && pos.y >= 0 && pos.x < RET_FORMWIDTH && pos.y < buildmenu_height && SecondaryWindowUp;
 }
 
 // Our chat dialog for global & team communication

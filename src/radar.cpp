@@ -633,12 +633,10 @@ static void DrawRadarExtras(const glm::mat4 &modelViewProjectionMatrix)
 	RenderWindowFrame(FRAME_RADAR, -1, -1, radarWidth + 2, radarHeight + 2, modelViewProjectionMatrix);
 }
 
-/** Does a screen coordinate lie within the radar area? */
-bool CoordInRadar(int x, int y)
+/// Does a screen coordinate lie within the radar area?
+bool coordInRadar(Vector2i pos_)
 {
-	Vector2f pos;
-	pos.x = x - radarCenterX;
-	pos.y = y - radarCenterY;
+	Vector2f pos = pos_ - Vector2i(radarCenterX, radarCenterY);
 	if (rotateRadar)
 	{
 		pos = Vector2f_Rotate2f(pos, -player.r.y);
@@ -646,11 +644,7 @@ bool CoordInRadar(int x, int y)
 	pos.x += radarWidth / 2.0;
 	pos.y += radarHeight / 2.0;
 
-	if (pos.x < 0 || pos.y < 0 || pos.x >= radarWidth || pos.y >= radarHeight)
-	{
-		return false;
-	}
-	return true;
+	return pos.x >= 0 && pos.y >= 0 && pos.x < radarWidth && pos.y < radarHeight;
 }
 
 void radarColour(UDWORD tileNumber, uint8_t r, uint8_t g, uint8_t b)

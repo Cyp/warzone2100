@@ -31,11 +31,7 @@
 /* Initialise the display system */
 bool dispInitialise();
 
-void ProcessRadarInput();
-
-void processInput();
-/*don't want to do any of these whilst in the Intelligence Screen*/
-CURSOR processMouseClickInput();
+CURSOR processMostInput(bool shouldProcessRadar, bool shouldProcessMouseClick);
 
 CURSOR scroll();
 void resetScroll();
@@ -211,7 +207,9 @@ void setSensorAssigned();
 void AddDerrickBurningMessage();
 
 // check whether the queue order keys are pressed
-bool ctrlShiftDown();
+struct Event;
+bool ctrlShiftDown(Event const &event);
+bool ctrlShiftDown_DEPRECATED();
 
 UDWORD getTargetType();
 

@@ -34,10 +34,11 @@
 #include "lib/framework/utf.h"
 #include "vector.h"
 #include <vector>
+#include <memory>
 
 
 /** Defines for all the key codes used. */
-enum KEY_CODE
+enum KEY_CODE : uint16_t
 {
 	KEY_ESC         = 27,
 	KEY_1           = '1',
@@ -111,6 +112,8 @@ enum KEY_CODE
 	KEY_F8          = 289,
 	KEY_F9          = 290,
 	KEY_F10         = 291,
+	KEY_F11         = 292,
+	KEY_F12         = 293,
 	KEY_NUMLOCK     = 300,
 	KEY_SCROLLLOCK  = 302,
 	KEY_KP_7        = 263,
@@ -126,8 +129,6 @@ enum KEY_CODE
 	KEY_KP_3        = 259,
 	KEY_KP_0        = 256,
 	KEY_KP_FULLSTOP = 266,
-	KEY_F11         = 292,
-	KEY_F12         = 293,
 	KEY_RCTRL       = 305,
 	KEY_KP_BACKSLASH = 267, ///< Most keypads just have a forward slash.
 	KEY_RALT        = 307,
@@ -147,7 +148,7 @@ enum KEY_CODE
 
 	KEY_IGNORE      = 5190
 };
-enum MOUSE_KEY_CODE
+enum MOUSE_KEY_CODE : uint8_t
 {
 	MOUSE_LMB = 1,
 	MOUSE_MMB,
@@ -159,21 +160,43 @@ enum MOUSE_KEY_CODE
 	MOUSE_END	// end of our enum
 };
 
-struct MousePress
+struct Event
 {
-	enum Action {None, Press, Release};
+	enum Type : uint8_t {Frame, Key, Text, Mouse};
+	enum Action : uint8_t {
+		FrameNew = Frame<<3,
+		KeyPress = Key<<3, KeyRelease,
+		TextUnicode = Text<<3,
+		MousePress = Mouse<<3, MouseRelease, MouseDoubleClick, MouseDrag, MouseMove
+	};
+	enum Flags : uint8_t {LCtrl = 1, RCtrl = 2, LAlt = 4, RAlt = 8, LShift = 16, RShift = 32, LMeta = 64, RMeta = 128, Ctrl = LCtrl|RCtrl, Alt = LAlt|RAlt, Shift = LShift|RShift, Meta = LMeta|RMeta};
 
-	MousePress(Action action = None, MOUSE_KEY_CODE key = MOUSE_END) : action(action), key(key), pos(0,0) {}
-	bool empty() const
-	{
-		return action == None;
-	}
+	Event(Action action, Vector2i pos, uint8_t flags) : action(action), button(MOUSE_END), key(KEY_IGNORE), unicode(0), pos(pos), dragStart(0, 0), time(0), flags(flags) {}
+	Event(Action action, uint32_t unicode, Vector2i pos, unsigned time, unsigned flags) : action(action), button(MOUSE_END), key(KEY_IGNORE), unicode(unicode), pos(pos), dragStart(0, 0), time(time), flags(flags) {}
+	Event(Action action, KEY_CODE key, Vector2i pos, unsigned time, unsigned flags) : action(action), button(MOUSE_END), key(key), unicode(0), pos(pos), dragStart(0, 0), time(time), flags(flags) {}
+	Event(Action action, MOUSE_KEY_CODE button, Vector2i pos, unsigned time, unsigned flags) : action(action), button(button), key(KEY_IGNORE), unicode(0), pos(pos), dragStart(0, 0), time(time), flags(flags) {}
+	Event(Action action, MOUSE_KEY_CODE button, Vector2i pos, Vector2i dragStart, unsigned time, unsigned flags) : action(action), button(button), key(KEY_IGNORE), unicode(0), pos(pos), dragStart(dragStart), time(time), flags(flags) {}
+
+	Type type() const { return Type(action>>3); }
+	bool keyPressed(KEY_CODE key_) const { return key == key_ && action == KeyPress; }
+	bool keyReleased(KEY_CODE key_) const { return key == key_ && action == KeyRelease; }
+	bool keySpecial() const { switch (key) { case KEY_LCTRL: case KEY_RCTRL: case KEY_LALT: case KEY_RALT: case KEY_LSHIFT: case KEY_RSHIFT: case KEY_LMETA: case KEY_RMETA: return true; default: return false; } }
+	bool mousePressed(MOUSE_KEY_CODE button_) const { return button == button_ && (action == MousePress || action == MouseDoubleClick); }
+	bool mouseDoubleClicked(MOUSE_KEY_CODE button_) const { return button == button_ && action == MouseDoubleClick; }
+	bool mouseDragged(MOUSE_KEY_CODE button_) const { return button == button_ && action == MouseDrag; }
+	bool mouseReleased(MOUSE_KEY_CODE button_) const { return button == button_ && action == MouseRelease; }
 
 	Action action;
-	MOUSE_KEY_CODE key;
-	Vector2i pos;
+	MOUSE_KEY_CODE button;  // Mouse
+	KEY_CODE key;  // Key
+	uint32_t unicode;  // Text
+	Vector2i pos;  // All (mouse position)
+	Vector2i dragStart;  // MouseDrag
+	unsigned time;  // Key, Text, Mouse
+	uint8_t flags;  // All
 };
-typedef std::vector<MousePress> MousePresses;
+
+typedef std::vector<Event> Events;
 
 /** Tell the input system that we have lost the focus. */
 void inputLoseFocus();
@@ -187,12 +210,6 @@ void inputInitialise();
 /** This returns true if the key is currently depressed. */
 bool keyDown(KEY_CODE code);
 
-/** This returns true if the key went from being up to being down this frame. */
-bool keyPressed(KEY_CODE code);
-
-/** This returns true if the key went from being down to being up this frame. */
-bool keyReleased(KEY_CODE code);
-
 /** Return the current X position of the mouse. */
 uint16_t mouseX() WZ_DECL_PURE;
 
@@ -202,23 +219,8 @@ uint16_t mouseY() WZ_DECL_PURE;
 /// Returns true iff the mouse is on the window.
 bool wzMouseInWindow();
 
-/// Return the position of the mouse where it was clicked last.
-Vector2i mousePressPos_DEPRECATED(MOUSE_KEY_CODE code) WZ_DECL_PURE;
-
-/// Return the position of the mouse where it was released last.
-Vector2i mouseReleasePos_DEPRECATED(MOUSE_KEY_CODE code) WZ_DECL_PURE;
-
 /** This returns true if the mouse key is currently depressed. */
 bool mouseDown(MOUSE_KEY_CODE code);
-
-/** This returns true if the mouse key was double clicked. */
-bool mouseDClicked(MOUSE_KEY_CODE code);
-
-/** This returns true if the mouse key went from being up to being down this frame. */
-bool mousePressed(MOUSE_KEY_CODE code);
-
-/** This returns true if the mouse key went from being down to being up this frame. */
-bool mouseReleased(MOUSE_KEY_CODE code);
 
 /** Check for a mouse drag, return the drag start coords if dragging. */
 WZ_DECL_NONNULL(2, 3) bool mouseDrag(MOUSE_KEY_CODE code, UDWORD *px, UDWORD *py);
@@ -254,7 +256,7 @@ bool getMouseWarp();
 UDWORD inputGetKey(utf_32_char *unicode);
 
 /// Returns all clicks/releases since last update.
-MousePresses const &inputGetClicks();
+Events const &inputGetEvents();
 
 /** Clear the input buffer. */
 void inputClearBuffer();

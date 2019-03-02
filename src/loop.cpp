@@ -161,7 +161,7 @@ static GAMECODE renderLoop()
 		{
 			if (dragBox3D.status != DRAG_DRAGGING && wallDrag.status != DRAG_DRAGGING
 			    && (intRetVal == INT_INTERCEPT
-			        || (radarOnScreen && CoordInRadar(mouseX(), mouseY()) && radarPermitted)))
+			        || (radarOnScreen && coordInRadar({mouseX(), mouseY()}) && radarPermitted)))
 			{
 				// Using software cursors (when on) for these menus due to a bug in SDL's SDL_ShowCursor()
 				wzSetCursor(CURSOR_DEFAULT);
@@ -301,20 +301,13 @@ static GAMECODE renderLoop()
 	{
 		if (!gameUpdatePaused())
 		{
-			if (dragBox3D.status != DRAG_DRAGGING
+			bool shouldProcessRadar = dragBox3D.status != DRAG_DRAGGING
 			    && wallDrag.status != DRAG_DRAGGING
-			    && intRetVal != INT_INTERCEPT)
-			{
-				ProcessRadarInput();
-			}
-			processInput();
-
-			//no key clicks or in Intelligence Screen
-			if (!isMouseOverRadar() && intRetVal == INT_NONE && !InGameOpUp && !isInGamePopupUp)
-			{
-				CURSOR cursor2 = processMouseClickInput();
-				cursor = cursor2 == CURSOR_DEFAULT? cursor : cursor2;
-			}
+			    && intRetVal != INT_INTERCEPT;
+			// Is shouldProcessMouseClick named correctly?
+			bool shouldProcessMouseClick = intRetVal == INT_NONE && !InGameOpUp && !isInGamePopupUp;
+			auto cursor2 = processMostInput(shouldProcessRadar, shouldProcessMouseClick);
+			cursor = cursor2 == CURSOR_DEFAULT? cursor : cursor2;
 			displayWorld();
 		}
 		wzPerfBegin(PERF_GUI, "User interface");
@@ -344,10 +337,13 @@ static GAMECODE renderLoop()
 	if (!quitting)
 	{
 		/* Check for toggling display mode */
-		if ((keyDown(KEY_LALT) || keyDown(KEY_RALT)) && keyPressed(KEY_RETURN))
+		for (auto &event : inputGetEvents())
 		{
-			war_setFullscreen(!war_getFullscreen());
-			wzToggleFullscreen();
+			if (event.keyPressed(KEY_RETURN) && (event.flags & Event::Alt))
+			{
+				war_setFullscreen(!war_getFullscreen());
+				wzToggleFullscreen();
+			}
 		}
 	}
 

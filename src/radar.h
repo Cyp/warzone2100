@@ -42,7 +42,7 @@ void drawRadar();				///< Draw the minimap on the screen.
 void CalcRadarPosition(int mX, int mY, int *PosX, int *PosY);	///< Given a position within the radar, returns a world coordinate.
 void SetRadarZoom(uint8_t ZoomLevel);		///< Set current zoom level. 1.0 is 1:1 resolution.
 uint8_t GetRadarZoom();			///< Get current zoom level.
-bool CoordInRadar(int x, int y);			///< Is screen coordinate inside minimap?
+bool coordInRadar(Vector2i pos);  ///< Is screen coordinate inside minimap?
 
 /** Different mini-map draw modes. */
 enum RADAR_DRAW_MODE

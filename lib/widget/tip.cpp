@@ -189,7 +189,7 @@ void tipDisplay()
 		}
 		else if (newMX != mx ||
 		         newMY != my ||
-		         mousePressed(MOUSE_LMB))
+		         mouseDown(MOUSE_LMB))
 		{
 			mx = newMX;
 			my = newMY;

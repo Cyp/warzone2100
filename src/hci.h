@@ -270,8 +270,8 @@ extern iIMDShape	*pNewDesignIMD;
 /* Initialise the in game interface */
 bool intInitialise();
 
-// Check of coordinate is in the build menu
-bool CoordInBuild(int x, int y);
+// Check if coordinate is in the build menu
+bool coordInBuild(Vector2i pos);
 
 /* Shut down the in game interface */
 void interfaceShutDown();

@@ -111,20 +111,14 @@ enum wzSDLAppEventCodes
 enum KEY_STATE
 {
 	KEY_UP,
-	KEY_PRESSED,
 	KEY_DOWN,
-	KEY_RELEASED,
-	KEY_PRESSRELEASE,	// When a key goes up and down in a frame
-	KEY_DOUBLECLICK,	// Only used by mouse keys
-	KEY_DRAG			// Only used by mouse keys
+	KEY_DRAG  // Only used by mouse keys
 };
 
-struct INPUT_STATE
+struct MOUSE_STATE
 {
-	KEY_STATE state; /// Last key/mouse state
-	UDWORD lastdown; /// last key/mouse button down timestamp
-	Vector2i pressPos;    ///< Location of last mouse press event.
-	Vector2i releasePos;  ///< Location of last mouse release event.
+	KEY_STATE state;  /// Last key/mouse state
+	unsigned lastdown;  /// Last mouse button down timestamp
 };
 
 // Clipboard routines
@@ -136,11 +130,10 @@ bool get_scrap(char **dst);
 #define DOUBLE_CLICK_INTERVAL 250
 
 /* The current state of the keyboard */
-static INPUT_STATE aKeyState[KEY_MAXSCAN];		// NOTE: SDL_NUM_SCANCODES is the max, but KEY_MAXSCAN is our limit
+static KEY_STATE aKeyState[KEY_MAXSCAN];		// NOTE: SDL_NUM_SCANCODES is the max, but KEY_MAXSCAN is our limit
 
 /* The current location of the mouse */
-static Uint16 mouseXPos = 0;
-static Uint16 mouseYPos = 0;
+static Vector2i mousePos = {0, 0};
 static bool mouseInWindow = true;
 
 /* How far the mouse has to move to start a drag */
@@ -150,12 +143,11 @@ static bool mouseInWindow = true;
 static MOUSE_KEY_CODE dragKey;
 
 /* The start of a possible drag by the mouse */
-static int dragX = 0;
-static int dragY = 0;
+static Vector2i drag = {0, 0};
 
 /* The current mouse button state */
-static INPUT_STATE aMouseState[MOUSE_END];
-static MousePresses mousePresses;
+static MOUSE_STATE aMouseState[MOUSE_END];
+static Events events;
 
 /* The current screen resizing state for this iteration through the game loop, in the game coordinate system */
 struct ScreenSizeChange
@@ -185,7 +177,6 @@ struct InputKey
 
 static InputKey	pInputBuffer[INPUT_MAXSTR];
 static InputKey	*pStartBuffer, *pEndBuffer;
-static utf_32_char *utf8Buf;				// is like the old 'unicode' from SDL 1.x
 static unsigned int CurrentKey = 0;			// Our Current keypress
 bool GetTextEvents = false;
 /**************************/
@@ -664,123 +655,123 @@ void wzAsyncExecOnMainThread(WZ_MAINTHREADEXEC *exec)
 **/
 static inline void initKeycodes()
 {
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_ESC, SDLK_ESCAPE));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_1, SDLK_1));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_2, SDLK_2));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_3, SDLK_3));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_4, SDLK_4));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_5, SDLK_5));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_6, SDLK_6));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_7, SDLK_7));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_8, SDLK_8));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_9, SDLK_9));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_0, SDLK_0));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_MINUS, SDLK_MINUS));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_EQUALS, SDLK_EQUALS));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_BACKSPACE, SDLK_BACKSPACE));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_TAB, SDLK_TAB));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_Q, SDLK_q));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_W, SDLK_w));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_E, SDLK_e));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_R, SDLK_r));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_T, SDLK_t));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_Y, SDLK_y));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_U, SDLK_u));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_I, SDLK_i));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_O, SDLK_o));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_P, SDLK_p));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_LBRACE, SDLK_LEFTBRACKET));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RBRACE, SDLK_RIGHTBRACKET));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RETURN, SDLK_RETURN));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_LCTRL, SDLK_LCTRL));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_A, SDLK_a));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_S, SDLK_s));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_D, SDLK_d));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F, SDLK_f));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_G, SDLK_g));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_H, SDLK_h));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_J, SDLK_j));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_K, SDLK_k));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_L, SDLK_l));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_SEMICOLON, SDLK_SEMICOLON));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_QUOTE, SDLK_QUOTE));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_BACKQUOTE, SDLK_BACKQUOTE));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_LSHIFT, SDLK_LSHIFT));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_LMETA, SDLK_LGUI));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_LSUPER, SDLK_LGUI));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_BACKSLASH, SDLK_BACKSLASH));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_Z, SDLK_z));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_X, SDLK_x));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_C, SDLK_c));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_V, SDLK_v));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_B, SDLK_b));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_N, SDLK_n));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_M, SDLK_m));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_COMMA, SDLK_COMMA));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_FULLSTOP, SDLK_PERIOD));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_FORWARDSLASH, SDLK_SLASH));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RSHIFT, SDLK_RSHIFT));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RMETA, SDLK_RGUI));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RSUPER, SDLK_RGUI));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_STAR, SDLK_KP_MULTIPLY));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_LALT, SDLK_LALT));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_SPACE, SDLK_SPACE));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_CAPSLOCK, SDLK_CAPSLOCK));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F1, SDLK_F1));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F2, SDLK_F2));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F3, SDLK_F3));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F4, SDLK_F4));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F5, SDLK_F5));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F6, SDLK_F6));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F7, SDLK_F7));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F8, SDLK_F8));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F9, SDLK_F9));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F10, SDLK_F10));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_NUMLOCK, SDLK_NUMLOCKCLEAR));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_SCROLLLOCK, SDLK_SCROLLLOCK));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_7, SDLK_KP_7));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_8, SDLK_KP_8));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_9, SDLK_KP_9));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_MINUS, SDLK_KP_MINUS));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_4, SDLK_KP_4));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_5, SDLK_KP_5));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_6, SDLK_KP_6));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_PLUS, SDLK_KP_PLUS));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_1, SDLK_KP_1));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_2, SDLK_KP_2));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_3, SDLK_KP_3));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_0, SDLK_KP_0));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_FULLSTOP, SDLK_KP_PERIOD));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F11, SDLK_F11));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_F12, SDLK_F12));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RCTRL, SDLK_RCTRL));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KP_BACKSLASH, SDLK_KP_DIVIDE));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RALT, SDLK_RALT));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_HOME, SDLK_HOME));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_UPARROW, SDLK_UP));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_PAGEUP, SDLK_PAGEUP));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_LEFTARROW, SDLK_LEFT));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_RIGHTARROW, SDLK_RIGHT));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_END, SDLK_END));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_DOWNARROW, SDLK_DOWN));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_PAGEDOWN, SDLK_PAGEDOWN));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_INSERT, SDLK_INSERT));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_DELETE, SDLK_DELETE));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_KPENTER, SDLK_KP_ENTER));
-	KEY_CODE_to_SDLKey.insert(std::pair<KEY_CODE, SDL_Keycode>(KEY_IGNORE, SDL_Keycode(5190)));
+	KEY_CODE_to_SDLKey = {
+		{KEY_ESC, SDLK_ESCAPE},
+		{KEY_1, SDLK_1},
+		{KEY_2, SDLK_2},
+		{KEY_3, SDLK_3},
+		{KEY_4, SDLK_4},
+		{KEY_5, SDLK_5},
+		{KEY_6, SDLK_6},
+		{KEY_7, SDLK_7},
+		{KEY_8, SDLK_8},
+		{KEY_9, SDLK_9},
+		{KEY_0, SDLK_0},
+		{KEY_MINUS, SDLK_MINUS},
+		{KEY_EQUALS, SDLK_EQUALS},
+		{KEY_BACKSPACE, SDLK_BACKSPACE},
+		{KEY_TAB, SDLK_TAB},
+		{KEY_Q, SDLK_q},
+		{KEY_W, SDLK_w},
+		{KEY_E, SDLK_e},
+		{KEY_R, SDLK_r},
+		{KEY_T, SDLK_t},
+		{KEY_Y, SDLK_y},
+		{KEY_U, SDLK_u},
+		{KEY_I, SDLK_i},
+		{KEY_O, SDLK_o},
+		{KEY_P, SDLK_p},
+		{KEY_LBRACE, SDLK_LEFTBRACKET},
+		{KEY_RBRACE, SDLK_RIGHTBRACKET},
+		{KEY_RETURN, SDLK_RETURN},
+		{KEY_LCTRL, SDLK_LCTRL},
+		{KEY_A, SDLK_a},
+		{KEY_S, SDLK_s},
+		{KEY_D, SDLK_d},
+		{KEY_F, SDLK_f},
+		{KEY_G, SDLK_g},
+		{KEY_H, SDLK_h},
+		{KEY_J, SDLK_j},
+		{KEY_K, SDLK_k},
+		{KEY_L, SDLK_l},
+		{KEY_SEMICOLON, SDLK_SEMICOLON},
+		{KEY_QUOTE, SDLK_QUOTE},
+		{KEY_BACKQUOTE, SDLK_BACKQUOTE},
+		{KEY_LSHIFT, SDLK_LSHIFT},
+		{KEY_LMETA, SDLK_LGUI},
+		{KEY_LSUPER, SDLK_LGUI},
+		{KEY_BACKSLASH, SDLK_BACKSLASH},
+		{KEY_Z, SDLK_z},
+		{KEY_X, SDLK_x},
+		{KEY_C, SDLK_c},
+		{KEY_V, SDLK_v},
+		{KEY_B, SDLK_b},
+		{KEY_N, SDLK_n},
+		{KEY_M, SDLK_m},
+		{KEY_COMMA, SDLK_COMMA},
+		{KEY_FULLSTOP, SDLK_PERIOD},
+		{KEY_FORWARDSLASH, SDLK_SLASH},
+		{KEY_RSHIFT, SDLK_RSHIFT},
+		{KEY_RMETA, SDLK_RGUI},
+		{KEY_RSUPER, SDLK_RGUI},
+		{KEY_KP_STAR, SDLK_KP_MULTIPLY},
+		{KEY_LALT, SDLK_LALT},
+		{KEY_SPACE, SDLK_SPACE},
+		{KEY_CAPSLOCK, SDLK_CAPSLOCK},
+		{KEY_F1, SDLK_F1},
+		{KEY_F2, SDLK_F2},
+		{KEY_F3, SDLK_F3},
+		{KEY_F4, SDLK_F4},
+		{KEY_F5, SDLK_F5},
+		{KEY_F6, SDLK_F6},
+		{KEY_F7, SDLK_F7},
+		{KEY_F8, SDLK_F8},
+		{KEY_F9, SDLK_F9},
+		{KEY_F10, SDLK_F10},
+		{KEY_NUMLOCK, SDLK_NUMLOCKCLEAR},
+		{KEY_SCROLLLOCK, SDLK_SCROLLLOCK},
+		{KEY_KP_7, SDLK_KP_7},
+		{KEY_KP_8, SDLK_KP_8},
+		{KEY_KP_9, SDLK_KP_9},
+		{KEY_KP_MINUS, SDLK_KP_MINUS},
+		{KEY_KP_4, SDLK_KP_4},
+		{KEY_KP_5, SDLK_KP_5},
+		{KEY_KP_6, SDLK_KP_6},
+		{KEY_KP_PLUS, SDLK_KP_PLUS},
+		{KEY_KP_1, SDLK_KP_1},
+		{KEY_KP_2, SDLK_KP_2},
+		{KEY_KP_3, SDLK_KP_3},
+		{KEY_KP_0, SDLK_KP_0},
+		{KEY_KP_FULLSTOP, SDLK_KP_PERIOD},
+		{KEY_F11, SDLK_F11},
+		{KEY_F12, SDLK_F12},
+		{KEY_RCTRL, SDLK_RCTRL},
+		{KEY_KP_BACKSLASH, SDLK_KP_DIVIDE},
+		{KEY_RALT, SDLK_RALT},
+		{KEY_HOME, SDLK_HOME},
+		{KEY_UPARROW, SDLK_UP},
+		{KEY_PAGEUP, SDLK_PAGEUP},
+		{KEY_LEFTARROW, SDLK_LEFT},
+		{KEY_RIGHTARROW, SDLK_RIGHT},
+		{KEY_END, SDLK_END},
+		{KEY_DOWNARROW, SDLK_DOWN},
+		{KEY_PAGEDOWN, SDLK_PAGEDOWN},
+		{KEY_INSERT, SDLK_INSERT},
+		{KEY_DELETE, SDLK_DELETE},
+		{KEY_KPENTER, SDLK_KP_ENTER},
+		{KEY_IGNORE, SDL_Keycode(5190)}
+	};
 
 	std::map<KEY_CODE, SDL_Keycode>::iterator it;
-	for (it = KEY_CODE_to_SDLKey.begin(); it != KEY_CODE_to_SDLKey.end(); it++)
+	for (auto &pair : KEY_CODE_to_SDLKey)
 	{
-		SDLKey_to_KEY_CODE.insert(std::pair<SDL_Keycode, KEY_CODE>(it->second, it->first));
+		SDLKey_to_KEY_CODE.insert({pair.second, pair.first});
 	}
 }
 
 static inline KEY_CODE sdlKeyToKeyCode(SDL_Keycode key)
 {
-	std::map<SDL_Keycode, KEY_CODE >::iterator it;
-
-	it = SDLKey_to_KEY_CODE.find(key);
+	auto it = SDLKey_to_KEY_CODE.find(key);
 	if (it != SDLKey_to_KEY_CODE.end())
 	{
 		return it->second;
@@ -790,9 +781,7 @@ static inline KEY_CODE sdlKeyToKeyCode(SDL_Keycode key)
 
 static inline SDL_Keycode keyCodeToSDLKey(KEY_CODE code)
 {
-	std::map<KEY_CODE, SDL_Keycode>::iterator it;
-
-	it = KEY_CODE_to_SDLKey.find(code);
+	auto it = KEY_CODE_to_SDLKey.find(code);
 	if (it != KEY_CODE_to_SDLKey.end())
 	{
 		return it->second;
@@ -806,7 +795,7 @@ static InputKey *inputPointerNext(InputKey *p)
 	return p + 1 == pInputBuffer + INPUT_MAXSTR ? pInputBuffer : p + 1;
 }
 
-/* add count copies of the characater code to the input buffer */
+// add count copies of the character code to the input buffer
 static void inputAddBuffer(UDWORD key, utf_32_char unicode)
 {
 	/* Calculate what pEndBuffer will be set to next */
@@ -871,23 +860,15 @@ void keyScanToString(KEY_CODE code, char *ascii, UDWORD maxStringSize)
 }
 
 /* Initialise the input module */
-void inputInitialise(void)
+void inputInitialise()
 {
-	for (unsigned int i = 0; i < KEY_MAXSCAN; i++)
-	{
-		aKeyState[i].state = KEY_UP;
-	}
-
-	for (unsigned int i = 0; i < MOUSE_END; i++)
-	{
-		aMouseState[i].state = KEY_UP;
-	}
+	std::fill(std::begin(aKeyState), std::end(aKeyState), KEY_UP);
+	std::fill(std::begin(aMouseState), std::end(aMouseState), MOUSE_STATE{KEY_UP, 0});
 
 	pStartBuffer = pInputBuffer;
 	pEndBuffer = pInputBuffer;
 
-	dragX = mouseXPos = screenWidth / 2;
-	dragY = mouseYPos = screenHeight / 2;
+	drag = mousePos = {screenWidth/2, screenHeight/2};
 	dragKey = MOUSE_LMB;
 
 }
@@ -927,48 +908,18 @@ UDWORD inputGetKey(utf_32_char *unicode)
 	return retVal;
 }
 
-MousePresses const &inputGetClicks()
+Events const &inputGetEvents()
 {
-	return mousePresses;
+	return events;
 }
 
 /*!
  * This is called once a frame so that the system can tell
  * whether a key was pressed this turn or held down from the last frame.
  */
-void inputNewFrame(void)
+void inputNewFrame()
 {
-	// handle the keyboard
-	for (unsigned int i = 0; i < KEY_MAXSCAN; i++)
-	{
-		if (aKeyState[i].state == KEY_PRESSED)
-		{
-			aKeyState[i].state = KEY_DOWN;
-			debug(LOG_NEVER, "This key is DOWN! %x, %d [%s]", i, i, SDL_GetKeyName(keyCodeToSDLKey((KEY_CODE)i)));
-		}
-		else if (aKeyState[i].state == KEY_RELEASED  ||
-		         aKeyState[i].state == KEY_PRESSRELEASE)
-		{
-			aKeyState[i].state = KEY_UP;
-			debug(LOG_NEVER, "This key is UP! %x, %d [%s]", i, i, SDL_GetKeyName(keyCodeToSDLKey((KEY_CODE)i)));
-		}
-	}
-
-	// handle the mouse
-	for (unsigned int i = 0; i < MOUSE_END; i++)
-	{
-		if (aMouseState[i].state == KEY_PRESSED)
-		{
-			aMouseState[i].state = KEY_DOWN;
-		}
-		else if (aMouseState[i].state == KEY_RELEASED
-		         || aMouseState[i].state == KEY_DOUBLECLICK
-		         || aMouseState[i].state == KEY_PRESSRELEASE)
-		{
-			aMouseState[i].state = KEY_UP;
-		}
-	}
-	mousePresses.clear();
+	events.clear();
 }
 
 /*!
@@ -977,13 +928,13 @@ void inputNewFrame(void)
 void inputLoseFocus(void)
 {
 	/* Lost the window focus, have to take this as a global key up */
-	for (unsigned int i = 0; i < KEY_MAXSCAN; i++)
+	for (auto &state : aKeyState)
 	{
-		aKeyState[i].state = KEY_UP;
+		state = KEY_UP;
 	}
-	for (unsigned int i = 0; i < MOUSE_END; i++)
+	for (auto &state : aMouseState)
 	{
-		aMouseState[i].state = KEY_UP;
+		state.state = KEY_UP;
 	}
 }
 
@@ -991,48 +942,24 @@ void inputLoseFocus(void)
 bool keyDown(KEY_CODE code)
 {
 	ASSERT_OR_RETURN(false, code < KEY_MAXSCAN, "Invalid keycode of %d!", (int)code);
-	return (aKeyState[code].state != KEY_UP);
-}
-
-/* This returns true if the key went from being up to being down this frame */
-bool keyPressed(KEY_CODE code)
-{
-	ASSERT_OR_RETURN(false, code < KEY_MAXSCAN, "Invalid keycode of %d!", (int)code);
-	return ((aKeyState[code].state == KEY_PRESSED) || (aKeyState[code].state == KEY_PRESSRELEASE));
-}
-
-/* This returns true if the key went from being down to being up this frame */
-bool keyReleased(KEY_CODE code)
-{
-	ASSERT_OR_RETURN(false, code < KEY_MAXSCAN, "Invalid keycode of %d!", (int)code);
-	return ((aKeyState[code].state == KEY_RELEASED) || (aKeyState[code].state == KEY_PRESSRELEASE));
+	return aKeyState[code] != KEY_UP;
 }
 
 /* Return the X coordinate of the mouse */
 Uint16 mouseX(void)
 {
-	return mouseXPos;
+	return mousePos.x;
 }
 
 /* Return the Y coordinate of the mouse */
 Uint16 mouseY(void)
 {
-	return mouseYPos;
+	return mousePos.y;
 }
 
 bool wzMouseInWindow()
 {
 	return mouseInWindow;
-}
-
-Vector2i mousePressPos_DEPRECATED(MOUSE_KEY_CODE code)
-{
-	return aMouseState[code].pressPos;
-}
-
-Vector2i mouseReleasePos_DEPRECATED(MOUSE_KEY_CODE code)
-{
-	return aMouseState[code].releasePos;
 }
 
 /* This returns true if the mouse key is currently depressed */
@@ -1044,28 +971,6 @@ bool mouseDown(MOUSE_KEY_CODE code)
 	       (code == MOUSE_MMB && aMouseState[MOUSE_LMB].state != KEY_UP && aMouseState[MOUSE_RMB].state != KEY_UP);
 }
 
-/* This returns true if the mouse key was double clicked */
-bool mouseDClicked(MOUSE_KEY_CODE code)
-{
-	return (aMouseState[code].state == KEY_DOUBLECLICK);
-}
-
-/* This returns true if the mouse key went from being up to being down this frame */
-bool mousePressed(MOUSE_KEY_CODE code)
-{
-	return ((aMouseState[code].state == KEY_PRESSED) ||
-	        (aMouseState[code].state == KEY_DOUBLECLICK) ||
-	        (aMouseState[code].state == KEY_PRESSRELEASE));
-}
-
-/* This returns true if the mouse key went from being down to being up this frame */
-bool mouseReleased(MOUSE_KEY_CODE code)
-{
-	return ((aMouseState[code].state == KEY_RELEASED) ||
-	        (aMouseState[code].state == KEY_DOUBLECLICK) ||
-	        (aMouseState[code].state == KEY_PRESSRELEASE));
-}
-
 /* Check for a mouse drag, return the drag start coords if dragging */
 bool mouseDrag(MOUSE_KEY_CODE code, UDWORD *px, UDWORD *py)
 {
@@ -1074,12 +979,26 @@ bool mouseDrag(MOUSE_KEY_CODE code, UDWORD *px, UDWORD *py)
 	    (code == MOUSE_MMB && ((aMouseState[MOUSE_LMB].state == KEY_DRAG && aMouseState[MOUSE_RMB].state != KEY_UP) ||
 	                           (aMouseState[MOUSE_LMB].state != KEY_UP && aMouseState[MOUSE_RMB].state == KEY_DRAG))))
 	{
-		*px = dragX;
-		*py = dragY;
+		*px = drag.x;
+		*py = drag.y;
 		return true;
 	}
 
 	return false;
+}
+
+static decltype(Event::flags) inputFlags()
+{
+	decltype(Event::flags) flags = 0;
+	aKeyState[KEY_LCTRL]  == KEY_DOWN && (flags |= Event::LCtrl);
+	aKeyState[KEY_RCTRL]  == KEY_DOWN && (flags |= Event::RCtrl);
+	aKeyState[KEY_LALT]   == KEY_DOWN && (flags |= Event::LAlt);
+	aKeyState[KEY_RALT]   == KEY_DOWN && (flags |= Event::RAlt);
+	aKeyState[KEY_LSHIFT] == KEY_DOWN && (flags |= Event::LShift);
+	aKeyState[KEY_RSHIFT] == KEY_DOWN && (flags |= Event::RShift);
+	aKeyState[KEY_LMETA]  == KEY_DOWN && (flags |= Event::LMeta);
+	aKeyState[KEY_RMETA]  == KEY_DOWN && (flags |= Event::RMeta);
+	return flags;
 }
 
 /*!
@@ -1160,14 +1079,11 @@ static void inputHandleKeyEvent(SDL_KeyboardEvent *keyEvent)
 		{
 			break;
 		}
-		if (aKeyState[code].state == KEY_UP ||
-		    aKeyState[code].state == KEY_RELEASED ||
-		    aKeyState[code].state == KEY_PRESSRELEASE)
-		{
-			// whether double key press or not
-			aKeyState[code].state = KEY_PRESSED;
-			aKeyState[code].lastdown = 0;
-		}
+		aKeyState[code] = KEY_DOWN;
+#ifdef KeyPress
+#undef KeyPress  // Aaargh, /usr/include/X11/X.h line 181
+#endif
+		events.emplace_back(Event::KeyPress, code, mousePos, keyEvent->timestamp, inputFlags());
 		break;
 
 	case SDL_KEYUP:
@@ -1178,14 +1094,11 @@ static void inputHandleKeyEvent(SDL_KeyboardEvent *keyEvent)
 		{
 			break;
 		}
-		if (aKeyState[code].state == KEY_PRESSED)
-		{
-			aKeyState[code].state = KEY_PRESSRELEASE;
-		}
-		else if (aKeyState[code].state == KEY_DOWN)
-		{
-			aKeyState[code].state = KEY_RELEASED;
-		}
+		aKeyState[code] = KEY_UP;
+#ifdef KeyRelease
+#undef KeyRelease  // Aaargh, /usr/include/X11/X.h line 182
+#endif
+		events.emplace_back(Event::KeyRelease, code, mousePos, keyEvent->timestamp, inputFlags());
 		break;
 	default:
 		break;
@@ -1198,18 +1111,17 @@ static void inputHandleKeyEvent(SDL_KeyboardEvent *keyEvent)
 void inputhandleText(SDL_TextInputEvent *Tevent)
 {
 	size_t *newtextsize = nullptr;
-	int size = 	SDL_strlen(Tevent->text);
+	int size = SDL_strlen(Tevent->text);
 	if (size)
 	{
-		if (utf8Buf)
-		{
-			// clean up memory from last use.
-			free(utf8Buf);
-			utf8Buf = nullptr;
-		}
-		utf8Buf = UTF8toUTF32(Tevent->text, newtextsize);
 		debug(LOG_INPUT, "Keyboard: text input \"%s\"", Tevent->text);
-		inputAddBuffer(CurrentKey, *utf8Buf);
+		auto utf32Buf = UTF8toUTF32(Tevent->text, newtextsize);
+		for (size_t i = 0; utf32Buf[i]; ++i)
+		{
+			inputAddBuffer(CurrentKey, utf32Buf[i]);
+			events.emplace_back(Event::TextUnicode, utf32Buf[i], mousePos, Tevent->timestamp, inputFlags());
+		}
+		free(utf32Buf);
 	}
 }
 
@@ -1220,13 +1132,11 @@ static void inputHandleMouseWheelEvent(SDL_MouseWheelEvent *wheel)
 {
 	if (wheel->x > 0 || wheel->y > 0)
 	{
-		aMouseState[MOUSE_WUP].state = KEY_PRESSED;
-		aMouseState[MOUSE_WUP].lastdown = 0;
+		events.emplace_back(Event::MousePress, MOUSE_WUP, mousePos, wheel->timestamp, inputFlags());
 	}
 	else if (wheel->x < 0 || wheel->y < 0)
 	{
-		aMouseState[MOUSE_WDN].state = KEY_PRESSED;
-		aMouseState[MOUSE_WDN].lastdown = 0;
+		events.emplace_back(Event::MousePress, MOUSE_WDN, mousePos, wheel->timestamp, inputFlags());
 	}
 }
 
@@ -1235,8 +1145,7 @@ static void inputHandleMouseWheelEvent(SDL_MouseWheelEvent *wheel)
  */
 static void inputHandleMouseButtonEvent(SDL_MouseButtonEvent *buttonEvent)
 {
-	mouseXPos = (int)((float)buttonEvent->x / current_displayScaleFactor);
-	mouseYPos = (int)((float)buttonEvent->y / current_displayScaleFactor);
+	mousePos = {buttonEvent->x/current_displayScaleFactor, buttonEvent->y / current_displayScaleFactor};
 
 	MOUSE_KEY_CODE mouseKeyCode;
 	switch (buttonEvent->button)
@@ -1249,58 +1158,32 @@ static void inputHandleMouseButtonEvent(SDL_MouseButtonEvent *buttonEvent)
 	default: return;  // Unknown button.
 	}
 
-	MousePress mousePress;
-	mousePress.key = mouseKeyCode;
-	mousePress.pos = Vector2i(mouseXPos, mouseYPos);
-
 	switch (buttonEvent->type)
 	{
 	case SDL_MOUSEBUTTONDOWN:
-		mousePress.action = MousePress::Press;
-		mousePresses.push_back(mousePress);
+	{
+		bool doubleClick = buttonEvent->timestamp - aMouseState[mouseKeyCode].lastdown < DOUBLE_CLICK_INTERVAL;
 
-		aMouseState[mouseKeyCode].pressPos.x = mouseXPos;
-		aMouseState[mouseKeyCode].pressPos.y = mouseYPos;
-		if (aMouseState[mouseKeyCode].state == KEY_UP
-		    || aMouseState[mouseKeyCode].state == KEY_RELEASED
-		    || aMouseState[mouseKeyCode].state == KEY_PRESSRELEASE)
+		events.emplace_back(doubleClick? Event::MouseDoubleClick : Event::MousePress, mouseKeyCode, mousePos, buttonEvent->timestamp, inputFlags());
+
+		aMouseState[mouseKeyCode].state = KEY_DOWN;
+		aMouseState[mouseKeyCode].lastdown = doubleClick? 0 : buttonEvent->timestamp;
+
+		if (mouseKeyCode < MOUSE_X1) // Assume they are draggin' with either LMB|RMB|MMB
 		{
-			// whether double click or not
-			if (realTime - aMouseState[mouseKeyCode].lastdown < DOUBLE_CLICK_INTERVAL)
+			if (aMouseState[dragKey].state == KEY_DRAG)
 			{
-				aMouseState[mouseKeyCode].state = KEY_DOUBLECLICK;
-				aMouseState[mouseKeyCode].lastdown = 0;
+				aMouseState[dragKey].state = KEY_DOWN;
 			}
-			else
-			{
-				aMouseState[mouseKeyCode].state = KEY_PRESSED;
-				aMouseState[mouseKeyCode].lastdown = realTime;
-			}
-
-			if (mouseKeyCode < MOUSE_X1) // Assume they are draggin' with either LMB|RMB|MMB
-			{
-				dragKey = mouseKeyCode;
-				dragX = mouseXPos;
-				dragY = mouseYPos;
-			}
+			drag = mousePos;
+			dragKey = mouseKeyCode;
 		}
 		break;
+	}
 	case SDL_MOUSEBUTTONUP:
-		mousePress.action = MousePress::Release;
-		mousePresses.push_back(mousePress);
+		events.emplace_back(Event::MouseRelease, mouseKeyCode, mousePos, buttonEvent->timestamp, inputFlags());
 
-		aMouseState[mouseKeyCode].releasePos.x = mouseXPos;
-		aMouseState[mouseKeyCode].releasePos.y = mouseYPos;
-		if (aMouseState[mouseKeyCode].state == KEY_PRESSED)
-		{
-			aMouseState[mouseKeyCode].state = KEY_PRESSRELEASE;
-		}
-		else if (aMouseState[mouseKeyCode].state == KEY_DOWN
-		         || aMouseState[mouseKeyCode].state == KEY_DRAG
-		         || aMouseState[mouseKeyCode].state == KEY_DOUBLECLICK)
-		{
-			aMouseState[mouseKeyCode].state = KEY_RELEASED;
-		}
+		aMouseState[mouseKeyCode].state = KEY_UP;
 		break;
 	default:
 		break;
@@ -1315,19 +1198,26 @@ static void inputHandleMouseMotionEvent(SDL_MouseMotionEvent *motionEvent)
 	switch (motionEvent->type)
 	{
 	case SDL_MOUSEMOTION:
+	{
 		/* store the current mouse position */
-		mouseXPos = (int)((float)motionEvent->x / current_displayScaleFactor);
-		mouseYPos = (int)((float)motionEvent->y / current_displayScaleFactor);
+		mousePos = {motionEvent->x/current_displayScaleFactor, motionEvent->y / current_displayScaleFactor};
 
 		/* now see if a drag has started */
-		if ((aMouseState[dragKey].state == KEY_PRESSED ||
-		     aMouseState[dragKey].state == KEY_DOWN) &&
-		    (ABSDIF(dragX, mouseXPos) > DRAG_THRESHOLD ||
-		     ABSDIF(dragY, mouseYPos) > DRAG_THRESHOLD))
+		bool isDrag = aMouseState[dragKey].state == KEY_DRAG;
+		isDrag |= aMouseState[dragKey].state == KEY_DOWN &&
+		    (abs(drag.x - mousePos.x) > DRAG_THRESHOLD ||
+		     abs(drag.y - mousePos.y) > DRAG_THRESHOLD);
+		if (isDrag)
 		{
 			aMouseState[dragKey].state = KEY_DRAG;
+			events.emplace_back(Event::MouseDrag, MOUSE_END, mousePos, drag, motionEvent->timestamp, inputFlags());
+		}
+		else
+		{
+			events.emplace_back(Event::MouseMove, MOUSE_END, mousePos, motionEvent->timestamp, inputFlags());
 		}
 		break;
+	}
 	default:
 		break;
 	}
@@ -1518,13 +1408,11 @@ bool wzChangeDisplayScale(unsigned int displayScale)
 	// the current position with respect to the window (which hasn't changed size) can be queried and used to
 	// calculate the new game coordinate system mouse position.)
 	//
-	int windowMouseXPos = 0, windowMouseYPos = 0;
-	SDL_GetMouseState(&windowMouseXPos, &windowMouseYPos);
-	debug(LOG_WZ, "Old mouse position: %d, %d", mouseXPos, mouseYPos);
-	mouseXPos = (int)((float)windowMouseXPos / current_displayScaleFactor);
-	mouseYPos = (int)((float)windowMouseYPos / current_displayScaleFactor);
-	debug(LOG_WZ, "New mouse position: %d, %d", mouseXPos, mouseYPos);
-
+	Vector2i windowMousePos = {0, 0};
+	SDL_GetMouseState(&windowMousePos.x, &windowMousePos.y);
+	debug(LOG_WZ, "Old mouse position: %d, %d", mousePos.x, mousePos.y);
+	mousePos = {windowMousePos.x/current_displayScaleFactor, windowMousePos.y/current_displayScaleFactor};
+	debug(LOG_WZ, "New mouse position: %d, %d", mousePos.x, mousePos.y);
 
 	processScreenSizeChangeNotificationIfNeeded();
 
@@ -1580,7 +1468,7 @@ bool wzChangeWindowResolution(int screen, unsigned int width, unsigned int heigh
 		debug(LOG_WZ, "SDL_GetDisplayUsableBounds for screen [%d]: pos %d x %d : WxH %d x %d", screen, (int)bounds.x, (int)bounds.y, (int)bounds.w, (int)bounds.h);
 
 		// Verify that the desired window size does not exceed the usable bounds of the specified display.
-		if ((width > bounds.w) || (height > bounds.h))
+		if (width > (unsigned)bounds.w || height > (unsigned)bounds.h)
 		{
 			debug(LOG_WZ, "Unable to change window size to (%d x %d) because it is larger than the screen's usable bounds", width, height);
 			return false;
@@ -1619,7 +1507,7 @@ bool wzChangeWindowResolution(int screen, unsigned int width, unsigned int heigh
 	// Check that the new size is the desired size
 	int resultingWidth, resultingHeight = 0;
 	SDL_GetWindowSize(WZwindow, &resultingWidth, &resultingHeight);
-	if (resultingWidth != width || resultingHeight != height) {
+	if ((unsigned)resultingWidth != width || (unsigned)resultingHeight != height) {
 		// Attempting to set the resolution failed
 		debug(LOG_WZ, "Attempting to change the resolution to %dx%d seems to have failed (result: %dx%d).", width, height, resultingWidth, resultingHeight);
 
@@ -1850,7 +1738,7 @@ bool wzMainScreenSetup(int antialiasing, bool fullscreen, bool vsync, bool highD
 	// Check that the actual window size matches the desired window size
 	int resultingWidth, resultingHeight = 0;
 	SDL_GetWindowSize(WZwindow, &resultingWidth, &resultingHeight);
-	if (resultingWidth != windowWidth || resultingHeight != windowHeight) {
+	if ((unsigned)resultingWidth != windowWidth || (unsigned)resultingHeight != windowHeight) {
 		// Failed to create window at desired size (This can happen for a number of reasons)
 		debug(LOG_ERROR, "Failed to create window at desired resolution: [%d] %d x %d; instead, received window of resolution: [%d] %d x %d; Reverting to default resolution of %d x %d", war_GetScreen(), windowWidth, windowHeight, war_GetScreen(), resultingWidth, resultingHeight, minWindowWidth, minWindowHeight);
 
@@ -2270,6 +2158,7 @@ void wzMainEventLoop(void)
 		appPtr->processEvents();		// Qt needs to do its stuff
 #endif
 		processScreenSizeChangeNotificationIfNeeded();
+		events.emplace_back(Event::FrameNew, mousePos, inputFlags());
 		mainLoop();				// WZ does its thing
 		inputNewFrame();			// reset input states
 	}

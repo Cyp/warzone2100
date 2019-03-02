@@ -71,15 +71,17 @@ static bool tryLoad(const WzString &path, const WzString &filename)
 		UDWORD size = 0;
 		if (!loadFile(WzString(path + filename).toUtf8().c_str(), &pFileData, &size))
 		{
-			debug(LOG_ERROR, "Failed to load model file: %s", WzString(path + filename).toUtf8().c_str());
+			debug(LOG_ERROR, "Failed to load model file: %s", (path + filename).toUtf8().c_str());
 			return false;
 		}
 		fileEnd = pFileData + size;
 		const char *pFileDataPt = pFileData;
 		iV_ProcessIMD(filename, (const char **)&pFileDataPt, fileEnd);
 		free(pFileData);
+debug(LOG_INFO, "Loaded \"%s\" \"%s\"", path.toUtf8().c_str(), filename.toUtf8().c_str());
 		return true;
 	}
+debug(LOG_INFO, "Not exist \"%s\" \"%s\"", path.toUtf8().c_str(), filename.toUtf8().c_str());
 	return false;
 }
 

@@ -167,7 +167,7 @@ bool process3DBuilding()
 	//if not trying to build ignore
 	if (buildState == BUILD3D_NONE)
 	{
-		if (quickQueueMode && !ctrlShiftDown())
+		if (quickQueueMode && !ctrlShiftDown_DEPRECATED())
 		{
 			quickQueueMode = false;
 			intDemolishCancel();
@@ -214,7 +214,7 @@ bool process3DBuilding()
 		buildState = BUILD3D_NONE;
 		return true;
 	}
-	if (quickQueueMode && !ctrlShiftDown())
+	if (quickQueueMode && !ctrlShiftDown_DEPRECATED())
 	{
 		buildState = BUILD3D_NONE;
 		quickQueueMode = false;
@@ -235,7 +235,7 @@ bool found3DBuilding(UDWORD *x, UDWORD *y)
 	*x = sBuildDetails.x;
 	*y = sBuildDetails.y;
 
-	if (ctrlShiftDown())
+	if (ctrlShiftDown_DEPRECATED())
 	{
 		quickQueueMode = true;
 		init3DBuilding(sBuildDetails.psStats, sBuildDetails.CallBack, sBuildDetails.UserData);
@@ -272,7 +272,7 @@ bool found3DBuildLocTwo(UDWORD *px1, UDWORD *py1, UDWORD *px2, UDWORD *py2)
 	*px2 = wallDrag.x2;
 	*py2 = wallDrag.y2;
 
-	if (ctrlShiftDown())
+	if (ctrlShiftDown_DEPRECATED())
 	{
 		quickQueueMode = true;
 		init3DBuilding(sBuildDetails.psStats, sBuildDetails.CallBack, sBuildDetails.UserData);

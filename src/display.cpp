@@ -251,89 +251,84 @@ void	setDrawShadows(bool val)
 	pie_setShadows(val);
 }
 
-void ProcessRadarInput()
+static bool processRadarInput(Event const &event)
 {
-	int PosX, PosY;
-	int x = mouseX();
-	int y = mouseY();
-	UDWORD	temp1, temp2;
-
-	/* Only allow jump-to-area-of-map if radar is on-screen */
-	mouseOverRadar = false;
-	if (radarOnScreen && radarPermitted)
+	if (event.type() != Event::Mouse)
 	{
-		if (CoordInRadar(x, y))
+		return false;
+	}
+
+	// Only allow jump-to-area-of-map if radar is on-screen
+	mouseOverRadar = false;
+	if (!radarOnScreen || !radarPermitted)
+	{
+		return false;
+	}
+
+	mouseOverRadar = coordInRadar(event.pos);
+	if (!mouseOverRadar)
+	{
+		return false;
+	}
+	int PosX, PosY;
+	CalcRadarPosition(event.pos.x, event.pos.y, &PosX, &PosY);
+	if (event.mousePressed(MOUSE_ORDER))
+	{
+		// If we're tracking a droid, then cancel that
+		// MARKER
+		// Send all droids to that location
+		orderSelectedLoc(selectedPlayer, PosX*TILE_UNITS + TILE_UNITS/2,
+		                                 PosY*TILE_UNITS + TILE_UNITS/2, ctrlShiftDown(event)); // ctrlShiftDown() = ctrl clicked a destination, add an order
+
+		CheckScrollLimits();
+		audio_PlayTrack(ID_SOUND_MESSAGEEND);
+	}
+	else if (event.mousePressed(MOUSE_SELECT))
+	{
+		if (war_GetRadarJump())
 		{
-			mouseOverRadar = true;
-
-			if (mousePressed(MOUSE_ORDER))
-			{
-				x = mousePressPos_DEPRECATED(MOUSE_ORDER).x;
-				y = mousePressPos_DEPRECATED(MOUSE_ORDER).y;
-
-				/* If we're tracking a droid, then cancel that */
-				CalcRadarPosition(x, y, &PosX, &PosY);
-				if (mouseOverRadar)
-				{
-					// MARKER
-					// Send all droids to that location
-					orderSelectedLoc(selectedPlayer, (PosX * TILE_UNITS) + TILE_UNITS / 2,
-					                 (PosY * TILE_UNITS) + TILE_UNITS / 2, ctrlShiftDown()); // ctrlShiftDown() = ctrl clicked a destination, add an order
-
-				}
-				CheckScrollLimits();
-				audio_PlayTrack(ID_SOUND_MESSAGEEND);
-			}
-
-
-			if (mouseDrag(MOUSE_SELECT, &temp1, &temp2) && !rotActive)
-			{
-				CalcRadarPosition(x, y, &PosX, &PosY);
-				setViewPos(PosX, PosY, true);
-				bRadarDragging = true;
-				if (ctrlShiftDown())
-				{
-					player.r.y = 0;
-				}
-			}
-			else if (mousePressed(MOUSE_SELECT))
-			{
-				x = mousePressPos_DEPRECATED(MOUSE_SELECT).x;
-				y = mousePressPos_DEPRECATED(MOUSE_SELECT).y;
-
-				CalcRadarPosition(x, y, &PosX, &PosY);
-
-				if (war_GetRadarJump())
-				{
-					/* Go instantly */
-					setViewPos(PosX, PosY, true);
-				}
-				else
-				{
-					/* Pan to it */
-					requestRadarTrack(PosX * TILE_UNITS, PosY * TILE_UNITS);
-				}
-			}
-			else if (mousePressed(MOUSE_WUP))
-			{
-				switch(war_GetScrollEvent())
-				{
-				    case 0: kf_RadarZoomIn(); break;
-				    case 1: kf_SpeedUp(); break;
-				    case 2: kf_PitchForward(); break;
-				}
-			}
-			else if (mousePressed(MOUSE_WDN))
-			{
-				switch(war_GetScrollEvent())
-				{
-				    case 0: kf_RadarZoomOut(); break;
-				    case 1: kf_SlowDown(); break;
-				    case 2: kf_PitchBack(); break;
-				}
-			}
+			/* Go instantly */
+			setViewPos(PosX, PosY, true);
+		}
+		else
+		{
+			/* Pan to it */
+			requestRadarTrack(PosX * TILE_UNITS, PosY * TILE_UNITS);
 		}
 	}
+	else if (event.mouseDragged(MOUSE_SELECT) && !rotActive)
+	{
+		setViewPos(PosX, PosY, true);
+		bRadarDragging = true;
+		if (ctrlShiftDown(event))
+		{
+			player.r.y = 0;
+		}
+	}
+	else if (event.mousePressed(MOUSE_WUP))
+	{
+		switch (war_GetScrollEvent())
+		{
+			case 0: kf_RadarZoomIn(); break;
+			case 1: kf_SpeedUp(); break;
+			case 2: kf_PitchForward(); break;
+		}
+	}
+	else if (event.mousePressed(MOUSE_WDN))
+	{
+		switch (war_GetScrollEvent())
+		{
+			case 0: kf_RadarZoomOut(); break;
+			case 1: kf_SlowDown(); break;
+			case 2: kf_PitchBack(); break;
+		}
+	}
+	else
+	{
+		return false;
+	}
+
+	return true;
 }
 
 // reset the input state
@@ -345,75 +340,71 @@ void resetInput()
 }
 
 /* Process the user input. This just processes the key input and jumping around the radar*/
-void processInput()
+static void processInput(Event const &event)
 {
-	bool mOverConstruction = false;
-
-	if (InGameOpUp || isInGamePopupUp)
+	mouseOverConsole = mouseOverHistoryConsoleBox(event);
+	if (event.action == Event::MousePress || event.action == Event::MouseDoubleClick)
 	{
-		dragBox3D.status = DRAG_RELEASED;	// disengage the dragging since it stops menu input
+		bool mOverConstruction = coordInBuild(event.pos);
+		switch (event.button)
+		{
+			case MOUSE_LMB:
+				// Allow the user to clear the (Active) console if need be
+				if (mouseOverConsoleBox(event))
+				{
+					clearActiveConsole();
+				}
+				break;
+			case MOUSE_WUP:
+				if (isMouseOverRadar())
+				{
+				}
+				else if (mOverConstruction)
+				{
+					kf_BuildPrevPage();
+				}
+				else if (!mouseOverConsole)
+				{
+					switch (war_GetScrollEvent())
+					{
+					case 0: kf_ZoomInStep(); break;
+					case 1: kf_SpeedUp(); break;
+					case 2: kf_PitchForward(); break;
+					}
+				}
+				break;
+			case MOUSE_WDN:
+				if (isMouseOverRadar())
+				{
+				}
+				else if (mOverConstruction)
+				{
+					kf_BuildNextPage();
+				}
+				else if (!mouseOverConsole)
+				{
+					switch(war_GetScrollEvent())
+					{
+						case 0: kf_ZoomOutStep(); break;
+						case 1: kf_SlowDown(); break;
+						case 2: kf_PitchBack(); break;
+					}
+				}
+				break;
+			default: break;
+		}
 	}
-
-	if (CoordInBuild(mouseX(), mouseY()))
-	{
-		mOverConstruction = true;
-	}
-
-	StartOfLastFrame = currentFrame;
-	currentFrame = frameGetFrameNumber();
-
-	ignoreRMBC = false;
 
 	/* Process all of our key mappings */
-	mouseOverConsole = mouseOverHistoryConsoleBox();
-	if (mousePressed(MOUSE_WUP) && !isMouseOverRadar())
-	{
-		if (mOverConstruction)
-		{
-			kf_BuildPrevPage();
-		}
-		else if (!mouseOverConsole)
-		{
-		    switch(war_GetScrollEvent())
-		    {
-			case 0: kf_ZoomInStep(); break;
-			case 1: kf_SpeedUp(); break;
-			case 2: kf_PitchForward(); break;
-		    }
-		}
-	}
-
-	if (mousePressed(MOUSE_WDN) && !isMouseOverRadar())
-	{
-		if (mOverConstruction)
-		{
-			kf_BuildNextPage();
-		}
-		else if (!mouseOverConsole)
-		{
-			switch(war_GetScrollEvent())
-			{
-			    case 0: kf_ZoomOutStep(); break;
-			    case 1: kf_SlowDown(); break;
-			    case 2: kf_PitchBack(); break;
-			}
-		}
-	}
-
 	if (intMode == INT_DESIGN)
 	{
 		/* Only process the function keys */
-		keyProcessMappings(true);
+		keyProcessMappings(event, true);
 	}
 	else if (bAllowOtherKeyPresses)
 	{
 		/* Run all standard mappings */
-		keyProcessMappings(false);
-	}
-	/* Allow the user to clear the (Active) console if need be */
-	if (mouseOverConsoleBox() && mousePressed(MOUSE_LMB))
-	{
-		clearActiveConsole();
+		keyProcessMappings(event, false);
 	}
 }
 
@@ -422,9 +413,9 @@ static bool OverRadarAndNotDragging()
 	return mouseOverRadar && dragBox3D.status != DRAG_DRAGGING && radarPermitted && wallDrag.status != DRAG_DRAGGING;
 }
 
-static void CheckFinishedDrag()
+static void checkFinishedDrag(Event const &event)
 {
-	if (mouseReleased(MOUSE_LMB) || mouseDown(MOUSE_RMB))
+	if (event.mouseReleased(MOUSE_LMB) || event.mousePressed(MOUSE_RMB))
 	{
 		selectAttempt = false;
 		if (dragBox3D.status == DRAG_DRAGGING)
@@ -450,13 +441,13 @@ static void CheckFinishedDrag()
 			}
 
 			/* Only clear if shift isn't down - this is for the drag selection box for units*/
-			if (!ctrlShiftDown() && wallDrag.status == DRAG_INACTIVE)
+			if (!ctrlShiftDown(event) && wallDrag.status == DRAG_INACTIVE)
 			{
 				clearSelection();
 			}
 			dragBox3D.status = DRAG_RELEASED;
-			dragBox3D.x2 = mouseX();
-			dragBox3D.y2 = mouseY();
+			dragBox3D.x2 = event.pos.x;
+			dragBox3D.y2 = event.pos.y;
 		}
 		else
 		{
@@ -466,9 +457,9 @@ static void CheckFinishedDrag()
 	}
 }
 
-static void CheckStartWallDrag()
+static void checkStartWallDrag(Event const &event)
 {
-	if (mousePressed(MOUSE_LMB))
+	if (event.mousePressed(MOUSE_LMB))
 	{
 		/* Store away the details if we're building */
 		// You can start dragging walls from invalid locations so check for
@@ -498,14 +489,13 @@ static void CheckStartWallDrag()
 }
 
 //this function is called when a location has been chosen to place a structure or a DP
-static bool CheckFinishedFindPosition()
+static bool checkFinishedFindPosition(Event const &event)
 {
 	bool OverRadar = OverRadarAndNotDragging();
 
 	/* Do not let the player position buildings 'under' the radar */
-	if (mouseReleased(MOUSE_LMB) && !OverRadar)
+	if (event.mouseReleased(MOUSE_LMB) && !OverRadar)
 	{
-
 		if (deliveryReposValid())
 		{
 			finishDeliveryPosition();
@@ -549,16 +539,14 @@ static bool CheckFinishedFindPosition()
 	return false;
 }
 
-static void HandleDrag()
+static void handleDrag(Event const &event)
 {
-	UDWORD dragX = 0, dragY = 0;
-
-	if (mouseDrag(MOUSE_LMB, &dragX, &dragY) && !mouseOverRadar && !mouseDown(MOUSE_RMB))
+	if (event.mouseDragged(MOUSE_LMB) && !mouseOverRadar && !mouseDown(MOUSE_RMB))
 	{
-		dragBox3D.x1 = dragX;
-		dragBox3D.x2 = mouseX();
-		dragBox3D.y1 = dragY;
-		dragBox3D.y2 = mouseY();
+		dragBox3D.x1 = event.dragStart.x;
+		dragBox3D.x2 = event.pos.x;
+		dragBox3D.y1 = event.dragStart.y;
+		dragBox3D.y2 = event.pos.y;
 		dragBox3D.status = DRAG_DRAGGING;
 
 		if (buildState == BUILD3D_VALID)
@@ -598,24 +586,19 @@ UDWORD getTargetType()
 }
 
 //don't want to do any of these whilst in the Intelligence Screen
-CURSOR processMouseClickInput()
+static void processMouseClickInput(Event const &event)
 {
-	UDWORD	i;
-	SELECTION_TYPE	selection;
-	MOUSE_TARGET	item = MT_NOTARGET;
 	bool OverRadar = OverRadarAndNotDragging();
 
-	CURSOR cursor = CURSOR_DEFAULT;
+	ignoreOrder = checkFinishedFindPosition(event);
 
-	ignoreOrder = CheckFinishedFindPosition();
+	checkStartWallDrag(event);
 
-	CheckStartWallDrag();
+	handleDrag(event);
 
-	HandleDrag();
+	checkFinishedDrag(event);
 
-	CheckFinishedDrag();
-
-	if (mouseReleased(MOUSE_LMB) && !OverRadar && dragBox3D.status != DRAG_RELEASED && !ignoreOrder && !mouseOverConsole && !bDisplayMultiJoiningStatus)
+	if (event.mouseReleased(MOUSE_LMB) && !OverRadar && dragBox3D.status != DRAG_RELEASED && !ignoreOrder && !mouseOverConsole && !bDisplayMultiJoiningStatus)
 	{
 		if (bRightClickOrders)
 		{
@@ -623,11 +606,11 @@ CURSOR processMouseClickInput()
 		}
 		else
 		{
-			if (!bMultiPlayer  && (establishSelection(selectedPlayer) == SC_DROID_TRANSPORTER || establishSelection(selectedPlayer) == SC_DROID_SUPERTRANSPORTER))
+			if (!bMultiPlayer && (establishSelection(selectedPlayer) == SC_DROID_TRANSPORTER || establishSelection(selectedPlayer) == SC_DROID_SUPERTRANSPORTER))
 			{
 				// Never, *ever* let user control the transport in SP games--it breaks the scripts!
 				ASSERT(game.type == CAMPAIGN, "Game type was set incorrectly!");
-				return cursor;
+				return;
 			}
 			else
 			{
@@ -636,12 +619,12 @@ CURSOR processMouseClickInput()
 		}
 	}
 
-	if (mouseDClicked(MOUSE_LMB))
+	if (event.mouseDoubleClicked(MOUSE_LMB))
 	{
 		dealWithLMBDClick();
 	}
 
-	if (mouseReleased(MOUSE_RMB) && !rotActive && !ignoreRMBC)
+	if (event.mouseReleased(MOUSE_RMB) && !rotActive && !ignoreRMBC)
 	{
 		dragBox3D.status = DRAG_INACTIVE;
 		// Pretty sure we wan't set walldrag status here aswell.
@@ -662,33 +645,43 @@ CURSOR processMouseClickInput()
 		}
 	}
 
-	if (!mouseDrag(MOUSE_SELECT, (UDWORD *)&rotX, (UDWORD *)&rotY) && bRadarDragging)
+	if (!event.mouseDragged(MOUSE_SELECT) && bRadarDragging)
 	{
+		rotX = event.dragStart.x;  // Ugh, too many random global variables.
+		rotY = event.dragStart.y;
 		bRadarDragging = false;
 	}
 
 	/* Right mouse click kills a building placement */
-	if (mouseReleased(MOUSE_RMB) &&
+	if (event.mouseReleased(MOUSE_RMB) &&
 	    (buildState == BUILD3D_POS || buildState == BUILD3D_VALID))
 	{
 		/* Stop the placement */
 		kill3DBuilding();
 		bRadarDragging = false;
 	}
-	if (mouseReleased(MOUSE_RMB))
+	if (event.mouseReleased(MOUSE_RMB))
 	{
 		cancelDeliveryRepos();
 	}
-	if (mouseDrag(MOUSE_ROTATE, (UDWORD *)&rotX, (UDWORD *)&rotY) && !rotActive && !bRadarDragging)
+	if (event.mouseDragged(MOUSE_ROTATE) && !rotActive && !bRadarDragging)
 	{
+		rotX = event.dragStart.x;  // Ugh, too many random global variables.
+		rotY = event.dragStart.y;
 		rotInitial = player.r.y;
 		rotInitialUp = player.r.x;
 		xMoved = 0;
 		yMoved = 0;
 		rotActive = true;
 	}
+}
 
-	selection = establishSelection(selectedPlayer);
+static CURSOR processMouseCursor(Event const &event)
+{
+	CURSOR cursor = CURSOR_DEFAULT;
+	MOUSE_TARGET item = MT_NOTARGET;
+
+	SELECTION_TYPE selection = establishSelection(selectedPlayer);
 	ASSERT(selection <= POSSIBLE_SELECTIONS, "Weirdy selection!");
 
 	if (gamePaused())
@@ -713,12 +706,12 @@ CURSOR processMouseClickInput()
 		item = itemUnderMouse(&ObjUnderMouse);
 		ASSERT(item < POSSIBLE_TARGETS, "Weirdy target!");
 
-		ObjAllied = (ObjUnderMouse && selectedPlayer != ObjUnderMouse->player && aiCheckAlliances(selectedPlayer, ObjUnderMouse->player));
+		ObjAllied = ObjUnderMouse && selectedPlayer != ObjUnderMouse->player && aiCheckAlliances(selectedPlayer, ObjUnderMouse->player);
 
 		if (item != MT_NOTARGET)
 		{
 			// exceptions to the lookup table.
-			if (ctrlShiftDown() &&
+			if (ctrlShiftDown(event) &&
 			    (ObjUnderMouse != nullptr) &&
 			    (ObjUnderMouse->player == selectedPlayer) &&
 			    (ObjUnderMouse->type == OBJ_DROID))
@@ -776,6 +769,7 @@ CURSOR processMouseClickInput()
 				// can't build if res extractors arent available.
 				if (item == MT_RESOURCE)
 				{
+					unsigned i;
 					for (i = 0; i < numStructureStats && asStructureStats[i].type != REF_RESOURCE_EXTRACTOR; i++) {} // find resource stat
 					if (i < numStructureStats && apStructTypeLists[selectedPlayer][i] != AVAILABLE)		// check if you can build it!
 					{
@@ -952,6 +946,38 @@ CURSOR processMouseClickInput()
 	}
 
 	CurrentItemUnderMouse = item;
+	return cursor;
+}
+
+CURSOR processMostInput(bool shouldProcessRadar, bool shouldProcessMouseClick)
+{
+	if (InGameOpUp || isInGamePopupUp)
+	{
+		dragBox3D.status = DRAG_RELEASED;	// disengage the dragging since it stops menu input
+	}
+
+	StartOfLastFrame = currentFrame;
+	currentFrame = frameGetFrameNumber();
+
+	ignoreRMBC = false;
+
+	CURSOR cursor = CURSOR_DEFAULT;
+	for (auto &event : inputGetEvents())
+	{
+		if (shouldProcessRadar && processRadarInput(event))
+		{
+			continue;
+		}
+		processInput(event);
+		if (shouldProcessMouseClick)
+		{
+			processMouseClickInput(event);
+			if (event.action == Event::FrameNew)
+			{
+				cursor = processMouseCursor(event);
+			}
+		}
+	}
 	return cursor;
 }
 
@@ -1509,7 +1535,11 @@ static void FeedbackOrderGiven()
 }
 
 // check whether the queue order keys are pressed
-bool ctrlShiftDown()
+bool ctrlShiftDown(Event const &event)
+{
+	return event.flags & (Event::Ctrl|Event::Shift);
+}
+bool ctrlShiftDown_DEPRECATED()
 {
 	return keyDown(KEY_LCTRL) || keyDown(KEY_RCTRL) || keyDown(KEY_LSHIFT) || keyDown(KEY_RSHIFT);
 }

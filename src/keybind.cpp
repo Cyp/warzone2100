@@ -2668,11 +2668,11 @@ void	kf_AddHelpBlip()
 	debug(LOG_WZ, "Adding beacon='%s'", sCurrentConsoleText);
 
 	/* check if clicked on radar */
-	x = mouseX();
+	x = mouseX();  // If mouse moved between pressing Alt+H and processing the event, these coords may be wrong.
 	y = mouseY();
 	if (radarOnScreen && radarPermitted)
 	{
-		if (CoordInRadar(x, y))
+		if (coordInRadar({x, y}))
 		{
 			mOverR = true;
 			CalcRadarPosition(x, y, &worldX, &worldY);
